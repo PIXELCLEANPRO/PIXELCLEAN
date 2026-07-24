@@ -1,0 +1,727 @@
+<title>PixelClean — Reparación de píxeles quemados</title>
+<meta name="description" content="PixelClean detecta y repara píxeles quemados o muertos del sensor en tus videos, cuadro a cuadro, 100% en tu computadora." />
+
+<style>
+  /* ---------- tokens ---------- */
+  :root {
+    --ink: #12151b;
+    --ink-soft: #565d6b;
+    --ink-faint: #9aa1b0;
+    --paper: #f3f4f8;
+    --panel: #ffffff;
+    --panel-2: #eceef4;
+    --line: #dde0e8;
+    --signal: #2f6fed;
+    --signal-ink: #ffffff;
+    --stuck: #1f9d4a;
+    --shadow: 0 1px 2px rgba(20, 22, 29, .06), 0 16px 32px rgba(20, 22, 29, .08);
+
+    --font-display: "Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif;
+    --font-body: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --font-mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+    --wrap: 1180px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #eef1f6;
+      --ink-soft: #9aa0af;
+      --ink-faint: #565d6b;
+      --paper: #0a0c10;
+      --panel: #12151b;
+      --panel-2: #171b23;
+      --line: #242933;
+      --signal: #4c86ff;
+      --signal-ink: #06070a;
+      --stuck: #59ff8f;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 24px 48px rgba(0, 0, 0, .55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #eef1f6; --ink-soft: #9aa0af; --ink-faint: #565d6b;
+    --paper: #0a0c10; --panel: #12151b; --panel-2: #171b23; --line: #242933;
+    --signal: #4c86ff; --signal-ink: #06070a; --stuck: #59ff8f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 24px 48px rgba(0, 0, 0, .55);
+  }
+  :root[data-theme="light"] {
+    --ink: #12151b; --ink-soft: #565d6b; --ink-faint: #9aa1b0;
+    --paper: #f3f4f8; --panel: #ffffff; --panel-2: #eceef4; --line: #dde0e8;
+    --signal: #2f6fed; --signal-ink: #ffffff; --stuck: #1f9d4a;
+    --shadow: 0 1px 2px rgba(20, 22, 29, .06), 0 16px 32px rgba(20, 22, 29, .08);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 64px 64px;
+    background-attachment: fixed;
+    background-position: center;
+  }
+  @media (max-width: 720px) { body { background-size: 40px 40px; } }
+
+  h1, h2, h3, .display {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 0;
+    color: var(--ink);
+  }
+  p { margin: 0; }
+  a { color: inherit; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--signal);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--stuck);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--stuck) 25%, transparent);
+    flex-shrink: 0;
+  }
+
+  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 28px; }
+  section { position: relative; }
+
+  .btn {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14.5px;
+    letter-spacing: 0.01em;
+    border-radius: 8px;
+    padding: 13px 22px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform .18s ease, background .18s ease, border-color .18s ease;
+    text-decoration: none;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+  .btn-primary { background: var(--signal); color: var(--signal-ink); }
+  .btn-primary:hover { background: color-mix(in srgb, var(--signal) 85%, white); }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  .btn-ghost:hover { border-color: var(--ink-faint); }
+
+  /* ---------- nav ---------- */
+  header.nav {
+    position: sticky; top: 0; z-index: 40;
+    backdrop-filter: blur(10px);
+    background: color-mix(in srgb, var(--paper) 82%, transparent);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-row { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+  .brand { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 800; font-size: 17px; letter-spacing: -0.01em; }
+  .brand svg { color: var(--signal); }
+  .nav-links { display: flex; gap: 30px; font-family: var(--font-display); font-weight: 600; font-size: 14px; }
+  .nav-links a { color: var(--ink-soft); text-decoration: none; transition: color .15s; }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-cta { display: flex; gap: 10px; }
+  @media (max-width: 780px) { .nav-links { display: none; } }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 88px 0 96px; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
+  @media (max-width: 920px) { .hero-grid { grid-template-columns: 1fr; } }
+
+  .hero h1 { font-size: clamp(38px, 5.4vw, 68px); line-height: 1.03; margin: 16px 0 22px; }
+  .hero h1 em { font-style: normal; color: var(--signal); }
+  .hero .lede { font-size: 19px; color: var(--ink-soft); max-width: 46ch; margin-bottom: 30px; }
+  .hero .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  .hero .fine {
+    font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint);
+    display: flex; align-items: center; gap: 8px; letter-spacing: .02em;
+  }
+  .hero .fine svg { color: var(--stuck); }
+
+  .hud {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .hud-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); letter-spacing: .04em;
+  }
+  .hud-dot { display: flex; gap: 6px; }
+  .hud-dot span { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+  .hud canvas { display: block; width: 100%; height: auto; }
+  .hud-readout {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+    background: var(--line);
+    border-top: 1px solid var(--line);
+  }
+  .hud-readout div { background: var(--panel); padding: 12px 14px; }
+  .hud-readout .k { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); letter-spacing: .06em; text-transform: uppercase; }
+  .hud-readout .v { font-family: var(--font-mono); font-size: 13.5px; color: var(--ink); margin-top: 3px; }
+  .hud-readout .v.ok { color: var(--stuck); }
+
+  /* ---------- reveal ---------- */
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.is-visible { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* ---------- section shell ---------- */
+  .section { padding: 84px 0; border-top: 1px solid var(--line); }
+  .section-head { max-width: 640px; margin-bottom: 48px; }
+  .section-head h2 { font-size: clamp(26px, 3vw, 36px); margin: 14px 0 12px; }
+  .section-head p { color: var(--ink-soft); font-size: 17px; }
+
+  /* ---------- steps ---------- */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--line); }
+  @media (max-width: 860px) { .steps { grid-template-columns: 1fr; } }
+  .step { background: var(--panel); padding: 30px 26px; position: relative; }
+  .step .n { font-family: var(--font-mono); font-size: 12px; color: var(--signal); letter-spacing: .08em; }
+  .step h3 { font-size: 18px; margin: 10px 0 8px; }
+  .step p { color: var(--ink-soft); font-size: 14.5px; }
+  .step .ic { width: 34px; height: 34px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; color: var(--signal); }
+
+  /* ---------- engines ---------- */
+  .engines { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 760px) { .engines { grid-template-columns: 1fr; } }
+  .engine {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 30px;
+  }
+  .engine .tag {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-faint); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; display: inline-block;
+  }
+  .engine h3 { font-size: 22px; margin: 16px 0 10px; }
+  .engine p { color: var(--ink-soft); font-size: 15px; margin-bottom: 18px; }
+  .engine .bar-row { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); margin-bottom: 8px; }
+  .engine .bar { flex: 1; height: 5px; border-radius: 4px; background: var(--panel-2); overflow: hidden; }
+  .engine .bar i { display: block; height: 100%; background: var(--signal); border-radius: 4px; }
+
+  /* ---------- features ---------- */
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  @media (max-width: 860px) { .features { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .features { grid-template-columns: 1fr; } }
+  .feature { background: var(--panel); padding: 26px 24px; }
+  .feature .ic { color: var(--signal); margin-bottom: 14px; }
+  .feature h3 { font-size: 15.5px; font-family: var(--font-display); font-weight: 700; margin-bottom: 7px; letter-spacing: 0; }
+  .feature p { font-size: 14px; color: var(--ink-soft); }
+
+  /* ---------- compare ---------- */
+  .compare-shell { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 8px; }
+  .compare {
+    position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 16/8.4; cursor: ew-resize; user-select: none; touch-action: none;
+  }
+  .compare canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .compare .after-mask { position: absolute; inset: 0; overflow: hidden; }
+  .compare .handle {
+    position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; left: 50%;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.2);
+  }
+  .compare .handle::after {
+    content: "⟷"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 38px; height: 38px; border-radius: 50%; background: #fff; color: #111;
+    display: flex; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 4px 14px rgba(0,0,0,.35);
+  }
+  .compare .label { position: absolute; top: 14px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: rgba(10,12,16,.55); color: #fff; backdrop-filter: blur(4px); }
+  .compare .label.before { left: 14px; }
+  .compare .label.after { right: 14px; }
+  .compare-caption { display: flex; justify-content: space-between; align-items: center; padding: 14px 12px 8px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); }
+
+  /* ---------- faq ---------- */
+  .faq { max-width: 760px; }
+  details.faq-item { border-bottom: 1px solid var(--line); padding: 20px 0; }
+  details.faq-item summary {
+    cursor: pointer; list-style: none; font-family: var(--font-display); font-weight: 700; font-size: 16.5px;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  }
+  details.faq-item summary::-webkit-details-marker { display: none; }
+  details.faq-item summary::after { content: "+"; font-size: 20px; color: var(--signal); font-family: var(--font-display); flex-shrink: 0; transition: transform .2s ease; }
+  details.faq-item[open] summary::after { transform: rotate(45deg); }
+  details.faq-item p { color: var(--ink-soft); font-size: 15.5px; margin-top: 12px; max-width: 60ch; }
+
+  /* ---------- footer / cta ---------- */
+  .cta-band {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 56px 44px;
+    display: flex; justify-content: space-between; align-items: center; gap: 30px; flex-wrap: wrap;
+  }
+  .cta-band h2 { font-size: clamp(24px, 3vw, 32px); max-width: 22ch; }
+  footer { padding: 48px 0 60px; }
+  .foot-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; padding-top: 40px; margin-top: 40px; border-top: 1px solid var(--line); }
+  .foot-links { display: flex; gap: 26px; font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint); }
+  .foot-links a { text-decoration: none; }
+  .foot-links a:hover { color: var(--ink); }
+  .foot-note { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); }
+</style>
+
+<header class="nav">
+  <div class="wrap nav-row">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+      PixelClean
+    </div>
+    <nav class="nav-links">
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#motores">Motores</a>
+      <a href="#funciones">Funciones</a>
+      <a href="#comparar">Antes / Después</a>
+      <a href="#preguntas">Preguntas</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="#preguntas">Preguntas</a>
+      <a class="btn btn-primary" href="#descarga">Descargar</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow">Reparación de sensor · 100% local</span>
+        <h1>Tu cámara quemó un<br><em>píxel</em>. Nosotros lo borramos<br>del video, cuadro a cuadro.</h1>
+        <p class="lede">PixelClean detecta el píxel verde quemado o muerto de tu sensor a partir de una sola foto, y repara automáticamente cada cuadro del clip con ffmpeg — sin subir un solo archivo a internet.</p>
+        <div class="ctas">
+          <a class="btn btn-primary" href="#como-funciona">Ver cómo funciona</a>
+          <a class="btn btn-ghost" href="#descarga">Descargar instalador</a>
+        </div>
+        <div class="fine">
+          <svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg>
+          Probado sobre Sony A7III · funciona con cualquier clip donde puedas fotografiar el defecto
+        </div>
+      </div>
+
+      <div class="hud reveal">
+        <div class="hud-top">
+          <span>SENSOR_SCAN.MP4</span>
+          <div class="hud-dot"><span></span><span></span><span></span></div>
+        </div>
+        <canvas id="heroCanvas" width="900" height="560" role="img" aria-label="Animación de una grilla de sensor sanando un píxel verde quemado con un barrido de reparación"></canvas>
+        <div class="hud-readout">
+          <div><div class="k">Motor</div><div class="v">opencv · inpaint</div></div>
+          <div><div class="k">Píxel detectado</div><div class="v">x214 · y118</div></div>
+          <div><div class="k">Estado</div><div class="v ok">reparado ✓</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="como-funciona">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">El asistente</span>
+        <h2>Cuatro pasos, en ese orden, y listo.</h2>
+        <p>El mismo flujo que ves al abrir la app: elegís el clip, marcás el defecto una sola vez, elegís el motor de reparación, y procesás todo el lote.</p>
+      </div>
+      <div class="steps reveal">
+        <div class="step">
+          <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h5l2 2h9v10H4z"/></svg></div>
+          <div class="n">01 · Clip</div>
+          <h3>Cargás tus videos</h3>
+          <p>Arrastrá los clips a la ventana o elegilos desde el explorador. PixelClean lee la metadata de cámara automáticamente.</p>
+        </div>
+        <div class="step">
+          <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></div>
+          <div class="n">02 · Máscara</div>
+          <h3>Marcás el defecto una vez</h3>
+          <p>Con un pincel de tamaño, dureza y opacidad ajustables pintás sobre el píxel quemado en un solo cuadro de muestra.</p>
+        </div>
+        <div class="step">
+          <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.55-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.55-1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34H9a1.7 1.7 0 001-1.55V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.55 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87V9a1.7 1.7 0 001.55 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.55 1z"/></svg></div>
+          <div class="n">03 · Motor y calidad</div>
+          <h3>Elegís motor y velocidad</h3>
+          <p>Desenfoque gaussiano para previsualizar rápido, o inpainting de OpenCV para máxima calidad. Vista previa antes/después en vivo.</p>
+        </div>
+        <div class="step">
+          <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          <div class="n">04 · Procesar</div>
+          <h3>Repara todo el lote</h3>
+          <p>Aplica la máscara a cada cuadro del clip con ffmpeg. Podés cancelar en cualquier momento sin dejar archivos a medio hacer.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="motores">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Dos formas de reparar</span>
+        <h2>Elegís velocidad o precisión, según el cuadro.</h2>
+        <p>Los dos motores conviven en la misma app — probás uno, cambiás al otro, y la vista previa se actualiza al instante.</p>
+      </div>
+      <div class="engines reveal">
+        <div class="engine">
+          <span class="tag">motor · blur</span>
+          <h3>Desenfoque gaussiano</h3>
+          <p>Mezcla el área marcada con una versión suavizada del mismo cuadro. Es el motor más rápido: ideal para revisar el lote entero antes de una pasada final.</p>
+          <div class="bar-row"><span>Velocidad</span></div>
+          <div class="bar"><i style="width:92%"></i></div>
+          <div class="bar-row" style="margin-top:12px"><span>Precisión de textura</span></div>
+          <div class="bar"><i style="width:45%"></i></div>
+        </div>
+        <div class="engine">
+          <span class="tag">motor · opencv inpaint</span>
+          <h3>Reconstrucción por inpainting</h3>
+          <p>Reconstruye la zona dañada a partir de la textura de los píxeles vecinos (algoritmo Telea). Más lento, pero indistinguible en fondos con detalle.</p>
+          <div class="bar-row"><span>Velocidad</span></div>
+          <div class="bar"><i style="width:48%"></i></div>
+          <div class="bar-row" style="margin-top:12px"><span>Precisión de textura</span></div>
+          <div class="bar"><i style="width:90%"></i></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="comparar">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Arrastrá el visor</span>
+        <h2>El mismo cuadro, antes y después.</h2>
+        <p>Así se ve la vista previa en vivo dentro de la app mientras ajustás pincel y motor — arrastrá la manija para comparar.</p>
+      </div>
+      <div class="compare-shell reveal">
+        <div class="compare" id="compareBox">
+          <canvas id="beforeCanvas" width="1280" height="672"></canvas>
+          <div class="after-mask" id="afterMask">
+            <canvas id="afterCanvas" width="1280" height="672"></canvas>
+          </div>
+          <span class="label before">Antes</span>
+          <span class="label after">Después</span>
+          <div class="handle" id="handle"></div>
+        </div>
+        <div class="compare-caption">
+          <span>frame_00214.png</span>
+          <span id="splitReadout">50% · reparado</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="funciones">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Bajo el capó</span>
+        <h2>Herramientas de retoque real, no un botón mágico.</h2>
+        <p>Todo lo que necesitás para dejar el clip listo para exportar, sin salir de la app.</p>
+      </div>
+      <div class="features reveal">
+        <div class="feature">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></div>
+          <h3>Pincel con tamaño, dureza y opacidad</h3>
+          <p>Igual que en un editor de fotos: ajustá cada parámetro con campos numéricos arrastrables o atajos de teclado.</p>
+        </div>
+        <div class="feature">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+          <h3>Vista previa antes/después en vivo</h3>
+          <p>Vas viendo el resultado del motor elegido mientras pintás, antes de procesar un solo cuadro real.</p>
+        </div>
+        <div class="feature">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15V6a2 2 0 00-2-2H5a2 2 0 00-2 2v9m18 0H3m18 0l-2.5 5h-13L3 15"/></svg></div>
+          <h3>Arrastrar y soltar clips</h3>
+          <p>Soltá los archivos directo sobre la ventana. También podés elegirlos desde el explorador de siempre.</p>
+        </div>
+        <div class="feature">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="15" height="12" rx="2"/><path d="M18 10l4-2v8l-4-2"/></svg></div>
+          <h3>Lee la metadata de tu cámara</h3>
+          <p>ISO, lente, timecode, perfil y espacio de color: los datos quedan a la vista mientras trabajás.</p>
+        </div>
+        <div class="feature">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div>
+          <h3>Cancelar cuando quieras</h3>
+          <p>Parás el procesamiento en cualquier punto del lote; los archivos parciales se limpian solos.</p>
+        </div>
+        <div class="feature">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg></div>
+          <h3>Modo claro y oscuro</h3>
+          <p>La interfaz arranca en oscuro por defecto y cambia al instante, para editar sin cansar la vista.</p>
+        </div>
+        <div class="feature">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></div>
+          <h3>Procesa por lotes</h3>
+          <p>Una sola máscara se aplica a todos los clips que tengan el mismo defecto de sensor, uno detrás del otro.</p>
+        </div>
+        <div class="feature">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0z"/><path d="M12 7v5l3 3"/></svg></div>
+          <h3>Corre sobre ffmpeg</h3>
+          <p>Motor de video estándar de la industria, embebido en el instalador — no hace falta instalar nada aparte.</p>
+        </div>
+        <div class="feature">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg></div>
+          <h3>100% local</h3>
+          <p>Tus clips nunca salen de tu computadora: no hay subida, ni cuenta, ni servidor de por medio.</p>
+        </div>
+        <div class="feature">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+          <h3>Deshacer y rehacer</h3>
+          <p>Historial completo de pinceladas mientras armás la máscara, con zoom y mano para moverte por el cuadro.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="preguntas">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Antes de instalar</span>
+        <h2>Preguntas frecuentes</h2>
+      </div>
+      <div class="faq reveal">
+        <details class="faq-item" open>
+          <summary>¿Necesito saber programar o instalar Python?</summary>
+          <p>No. El instalador de Windows trae todo embebido, ffmpeg incluido. Se instala como cualquier programa y se abre desde el menú inicio.</p>
+        </details>
+        <details class="faq-item">
+          <summary>¿Mis videos se suben a algún servidor?</summary>
+          <p>Nunca. Todo el procesamiento corre en tu propia computadora. PixelClean no tiene conexión a internet ni la necesita.</p>
+        </details>
+        <details class="faq-item">
+          <summary>¿Funciona con cámaras que no sean la Sony A7III?</summary>
+          <p>Sí. Se probó primero sobre A7III porque fue donde apareció el defecto original, pero el detector de píxel verde y ambos motores de reparación funcionan con cualquier clip donde puedas fotografiar el punto dañado.</p>
+        </details>
+        <details class="faq-item">
+          <summary>¿Qué pasa si cancelo a mitad de un lote?</summary>
+          <p>El clip que se estaba procesando en ese momento se descarta junto con su archivo parcial; los clips ya terminados quedan guardados.</p>
+        </details>
+        <details class="faq-item">
+          <summary>¿Cuál motor debería usar?</summary>
+          <p>Empezá con Blur para revisar rápido que la máscara esté bien ubicada en todo el lote, y pasá a OpenCV Inpainting para la exportación final.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="descarga">
+    <div class="wrap">
+      <div class="cta-band reveal">
+        <h2>Un píxel quemado no debería arruinar la toma.</h2>
+        <div class="ctas">
+          <a class="btn btn-primary" href="#preguntas">Pedir el instalador</a>
+          <a class="btn btn-ghost" href="#como-funciona">Volver a ver el flujo</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <div class="brand">
+        <svg width="18" height="18" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+        PixelClean
+      </div>
+      <nav class="foot-links">
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="#motores">Motores</a>
+        <a href="#funciones">Funciones</a>
+        <a href="#preguntas">Preguntas</a>
+      </nav>
+      <span class="foot-note">Reparación de sensor, local · Windows</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---- scroll reveal ---- */
+  var els = document.querySelectorAll(".reveal");
+  if ("IntersectionObserver" in window && !REDUCED) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("is-visible"); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.14 });
+    els.forEach(function (el) { io.observe(el); });
+  } else {
+    els.forEach(function (el) { el.classList.add("is-visible"); });
+  }
+
+  /* ---- hero HUD: sensor grid healing loop ---- */
+  var hc = document.getElementById("heroCanvas");
+  var hx = hc.getContext("2d");
+  var cols = 14, rows = 9;
+  var stuckCell = { c: 9, r: 3 };
+
+  function seeded(i, j) {
+    var x = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  }
+
+  function drawHero(t) {
+    var W = hc.width, H = hc.height;
+    hx.clearRect(0, 0, W, H);
+    var pad = 30;
+    var cw = (W - pad * 2) / cols, ch = (H - pad * 2) / rows;
+    var cycle = 3600;
+    var phase = REDUCED ? cycle * 0.7 : (t % cycle) / cycle;
+    var bandX = pad + phase * (W - pad * 2);
+    var bandW = 130;
+
+    var style = getComputedStyle(document.documentElement);
+    var lineColor = style.getPropertyValue("--line").trim() || "#242933";
+    var panel2 = style.getPropertyValue("--panel-2").trim() || "#171b23";
+    var stuckColor = style.getPropertyValue("--stuck").trim() || "#59ff8f";
+    var signal = style.getPropertyValue("--signal").trim() || "#4c86ff";
+
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        var x = pad + c * cw, y = pad + r * ch;
+        var noise = seeded(c, r);
+        var isStuck = c === stuckCell.c && r === stuckCell.r;
+        var cellCenterX = x + cw / 2;
+        var healed = isStuck && (cellCenterX < bandX - bandW / 2 || phase > 0.97);
+        var inBand = isStuck && Math.abs(cellCenterX - bandX) < bandW / 2;
+
+        hx.fillStyle = panel2;
+        hx.globalAlpha = 0.35 + noise * 0.25;
+        hx.fillRect(x + 1.5, y + 1.5, cw - 3, ch - 3);
+        hx.globalAlpha = 1;
+
+        if (isStuck) {
+          if (inBand) {
+            var local = (cellCenterX - (bandX - bandW / 2)) / bandW;
+            hx.fillStyle = local < 0.5 ? stuckColor : signal;
+            hx.globalAlpha = local < 0.5 ? 1 : 0.85;
+          } else if (healed) {
+            hx.fillStyle = signal;
+            hx.globalAlpha = 0.85;
+          } else {
+            hx.fillStyle = stuckColor;
+            hx.globalAlpha = 1;
+          }
+          hx.save();
+          hx.shadowColor = hx.fillStyle;
+          hx.shadowBlur = 22;
+          hx.fillRect(x + 3, y + 3, cw - 6, ch - 6);
+          hx.restore();
+          hx.globalAlpha = 1;
+        }
+      }
+    }
+
+    /* scan band */
+    if (!REDUCED) {
+      var grad = hx.createLinearGradient(bandX - bandW / 2, 0, bandX + bandW / 2, 0);
+      grad.addColorStop(0, "rgba(76,134,255,0)");
+      grad.addColorStop(0.5, "rgba(76,134,255,0.16)");
+      grad.addColorStop(1, "rgba(76,134,255,0)");
+      hx.fillStyle = grad;
+      hx.fillRect(bandX - bandW / 2, 0, bandW, H);
+    }
+
+    /* grid lines */
+    hx.strokeStyle = lineColor;
+    hx.globalAlpha = 0.6;
+    hx.lineWidth = 1;
+    hx.beginPath();
+    for (var i = 0; i <= cols; i++) {
+      var gx = pad + i * cw;
+      hx.moveTo(gx, pad); hx.lineTo(gx, H - pad);
+    }
+    for (var j = 0; j <= rows; j++) {
+      var gy = pad + j * ch;
+      hx.moveTo(pad, gy); hx.lineTo(W - pad, gy);
+    }
+    hx.stroke();
+    hx.globalAlpha = 1;
+  }
+
+  if (REDUCED) {
+    drawHero(0);
+  } else {
+    requestAnimationFrame(function loop(t) { drawHero(t); requestAnimationFrame(loop); });
+  }
+
+  /* ---- before / after compare ---- */
+  function paintScene(ctx, W, H, withDefects) {
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#101a2e");
+    g.addColorStop(0.55, "#1b2f4d");
+    g.addColorStop(1, "#0c1420");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    var g2 = ctx.createRadialGradient(W * 0.72, H * 0.28, 20, W * 0.72, H * 0.28, W * 0.55);
+    g2.addColorStop(0, "rgba(255,196,120,0.35)");
+    g2.addColorStop(1, "rgba(255,196,120,0)");
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = "rgba(6,10,18,0.55)";
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.62);
+    for (var x = 0; x <= W; x += W / 10) {
+      ctx.lineTo(x, H * 0.62 + Math.sin(x * 0.01) * 14);
+    }
+    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+    ctx.fill();
+
+    if (withDefects) {
+      var pts = [[214,118],[540,240],[860,90],[300,340],[700,410],[120,260],[960,300],[430,80]];
+      pts.forEach(function (p) {
+        var px = (p[0] / 1280) * W, py = (p[1] / 672) * H;
+        ctx.save();
+        ctx.shadowColor = "#59ff8f";
+        ctx.shadowBlur = 16;
+        ctx.fillStyle = "#59ff8f";
+        ctx.beginPath();
+        ctx.arc(px, py, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+  }
+
+  var bc = document.getElementById("beforeCanvas");
+  var ac = document.getElementById("afterCanvas");
+  paintScene(bc.getContext("2d"), bc.width, bc.height, true);
+  paintScene(ac.getContext("2d"), ac.width, ac.height, false);
+
+  var box = document.getElementById("compareBox");
+  var mask = document.getElementById("afterMask");
+  var handle = document.getElementById("handle");
+  var readout = document.getElementById("splitReadout");
+
+  function setSplit(pct) {
+    pct = Math.max(0, Math.min(100, pct));
+    mask.style.clipPath = "inset(0 0 0 " + pct + "%)";
+    handle.style.left = pct + "%";
+    readout.textContent = Math.round(100 - pct) + "% después · reparado";
+  }
+  setSplit(50);
+
+  var dragging = false;
+  function fromEvent(e) {
+    var rect = box.getBoundingClientRect();
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    return ((clientX - rect.left) / rect.width) * 100;
+  }
+  box.addEventListener("pointerdown", function (e) { dragging = true; setSplit(fromEvent(e)); });
+  window.addEventListener("pointermove", function (e) { if (dragging) setSplit(fromEvent(e)); });
+  window.addEventListener("pointerup", function () { dragging = false; });
+})();
+</script>

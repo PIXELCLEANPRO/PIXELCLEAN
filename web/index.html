@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>PixelClean</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+
+<svg style="display:none">
+  <symbol id="i-logo" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-brush" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 10-10-3-3-10 10-1 4z"/><path d="M14 6l3 3"/></symbol>
+  <symbol id="i-eraser" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l9-9 5 5-9 9H6z"/><path d="M13 8l3-3 5 5-3 3"/></symbol>
+  <symbol id="i-move" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><polyline points="9 5 12 2 15 5"/><polyline points="9 19 12 22 15 19"/><polyline points="5 9 2 12 5 15"/><polyline points="19 9 22 12 19 15"/></symbol>
+  <symbol id="i-zoomin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></symbol>
+  <symbol id="i-zoomout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+  <symbol id="i-droplet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s7 8.5 7 13a7 7 0 0 1-14 0c0-4.5 7-13 7-13z"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5z"/></symbol>
+</svg>
+
+<div class="app" id="app">
+
+  <div class="topbar">
+    <div class="brand"><svg width="20" height="20"><use href="#i-logo"/></svg>PixelClean</div>
+    <div class="steps" id="steps"></div>
+    <div class="theme-switcher">
+      <svg width="15" height="15" class="theme-icon theme-icon-sun"><use href="#i-sun"/></svg>
+      <button class="theme-toggle" id="themeToggle" title="Cambiar tema"></button>
+      <svg width="15" height="15" class="theme-icon theme-icon-moon"><use href="#i-moon"/></svg>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <div class="panel panel-clip active" data-step="0">
+      <div class="clip-toprow">
+        <button class="btn btn-primary" id="btnCargarClips"><svg width="15" height="15"><use href="#i-folder"/></svg>Cargar clips...</button>
+        <span class="nav-info" id="lblClips">Ningun clip cargado</span>
+      </div>
+      <div class="clip-body">
+        <div class="card clip-list" id="clipList"></div>
+        <div class="card meta-panel">
+          <div class="brand-badge" id="brandBadge"><svg width="14" height="14"><use href="#i-camera"/></svg><span>Sin datos de camara</span></div>
+          <div class="meta-fields" id="metaFields"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-mascara" data-step="1">
+      <div class="card editor-shell" style="flex:1">
+        <div class="toolbar-v" id="toolbarMascara">
+          <button class="tool-btn active" data-tool="brush"><svg width="18" height="18"><use href="#i-brush"/></svg><span class="tip">Pincel</span></button>
+          <button class="tool-btn" data-tool="eraser"><svg width="18" height="18"><use href="#i-eraser"/></svg><span class="tip">Goma</span></button>
+          <button class="tool-btn" data-tool="hand"><svg width="18" height="18"><use href="#i-move"/></svg><span class="tip">Mano (pan)</span></button>
+          <div class="tool-sep"></div>
+          <button class="tool-btn" id="btnUndo"><svg width="17" height="17"><use href="#i-undo"/></svg><span class="tip">Deshacer</span></button>
+          <button class="tool-btn" id="btnRedo"><svg width="17" height="17"><use href="#i-redo"/></svg><span class="tip">Rehacer</span></button>
+          <button class="tool-btn" id="btnRotate"><svg width="17" height="17"><use href="#i-rotate"/></svg><span class="tip">Rotar 90</span></button>
+          <div class="tool-sep"></div>
+          <button class="tool-btn" id="btnLoadPng"><svg width="17" height="17"><use href="#i-upload"/></svg><span class="tip">Cargar PNG</span></button>
+          <div class="tool-sep"></div>
+          <button class="tool-btn" id="btnZoomIn"><svg width="16" height="16"><use href="#i-zoomin"/></svg><span class="tip">Acercar</span></button>
+          <button class="tool-btn" id="btnZoomOut"><svg width="16" height="16"><use href="#i-zoomout"/></svg><span class="tip">Alejar</span></button>
+        </div>
+        <div class="canvas-zone">
+          <div class="options-bar">
+            <div class="scrub-field" id="scrubSize" title="Arrastra para cambiar. Doble click para escribir. Atajo: [ ]">
+              <span class="sf-label">Tamano</span><span class="sf-value">28</span><span class="sf-unit">px</span>
+            </div>
+            <div class="scrub-field" id="scrubHardness" title="Arrastra para cambiar. Atajo: Shift+[ ]">
+              <span class="sf-label">Dureza</span><span class="sf-value">100</span><span class="sf-unit">%</span>
+            </div>
+            <div class="scrub-field" id="scrubOpacity" title="Arrastra para cambiar">
+              <span class="sf-label">Opacidad</span><span class="sf-value">100</span><span class="sf-unit">%</span>
+            </div>
+            <div class="scrub-field" id="scrubAngle" title="Arrastra para rotar fino">
+              <span class="sf-label">Angulo</span><span class="sf-value">0</span><span class="sf-unit">°</span>
+            </div>
+            <div class="options-bar-hint">Alt + click derecho: arrastrar para tamano/dureza</div>
+          </div>
+          <div class="canvas-viewport" id="viewportMascara">
+            <div class="canvas-stage" id="stageMascara">
+              <canvas id="cnvFrame"></canvas>
+              <canvas id="cnvMask"></canvas>
+            </div>
+          </div>
+          <div class="zoom-hud">
+            <button id="hudZoomOut"><svg width="14" height="14"><use href="#i-zoomout"/></svg></button>
+            <span class="pct" id="zoomPct">100%</span>
+            <button id="hudZoomIn"><svg width="14" height="14"><use href="#i-zoomin"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="resizer" id="resizerMascara"></div>
+      <div class="preview-col" id="previewColMascara"></div>
+    </div>
+
+    <div class="panel panel-motor" data-step="2">
+      <div class="card options-col">
+        <div>
+          <div class="section-title">Motor de reparacion</div>
+          <div class="engine-card selected" data-engine="blur">
+            <div class="icon"><svg width="17" height="17"><use href="#i-droplet"/></svg></div>
+            <div class="info"><div class="title">Blur gaussiano</div><div class="desc">Rapido, difumina la zona</div></div>
+          </div>
+          <div class="engine-card" data-engine="opencv">
+            <div class="icon"><svg width="17" height="17"><use href="#i-spark"/></svg></div>
+            <div class="info"><div class="title">OpenCV inpainting</div><div class="desc">Reconstruye bordes y textura</div></div>
+            <div class="tag">Recomendado</div>
+          </div>
+          <label style="font-size:11.5px;color:var(--text-2)">Intensidad del blur</label>
+          <input type="range" id="sliderSigma" min="1" max="40" value="15" style="width:100%;margin-top:6px">
+        </div>
+        <div>
+          <div class="section-title">Calidad y peso</div>
+          <label class="radio-row"><input type="radio" name="calidad" value="bitrate" checked> Igualar bitrate original</label>
+          <label class="radio-row"><input type="radio" name="calidad" value="crf"> Calidad fija (CRF)</label>
+          <div class="pill-select" id="pillVelocidad" style="margin:8px 0">
+            <div class="pill selected" data-vel="Rapido">Rapido</div>
+            <div class="pill" data-vel="Equilibrado">Equilibrado</div>
+            <div class="pill" data-vel="Calidad">Calidad</div>
+          </div>
+          <select id="selectResolucion" style="width:100%">
+            <option>Original</option>
+            <option>1080p (1920x1080)</option>
+            <option>720p (1280x720)</option>
+          </select>
+        </div>
+      </div>
+      <div class="resizer" id="resizerMotor"></div>
+      <div class="preview-col" id="previewColMotor"></div>
+    </div>
+
+    <div class="panel panel-procesar" data-step="3">
+      <div class="card ring-col">
+        <div class="ring-wrap">
+          <svg width="170" height="170">
+            <circle class="ring-track" cx="85" cy="85" r="72"/>
+            <circle class="ring-fill" id="ringFill" cx="85" cy="85" r="72" stroke-dasharray="452" stroke-dashoffset="452"/>
+          </svg>
+          <div class="ring-label" id="ringLabel">0%</div>
+        </div>
+        <div class="nav-info" id="lblProcesoInfo">0 / 0 clips</div>
+        <button class="btn btn-ghost" id="btnCancelar" style="display:none">Cancelar</button>
+      </div>
+      <div class="card log-col">
+        <div class="log-box" id="logBox"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottomnav">
+    <button class="btn btn-ghost" id="btnAtras"><svg width="14" height="14"><use href="#i-chevron-left"/></svg>Atras</button>
+    <span class="nav-info" id="navInfo"></span>
+    <button class="btn btn-primary" id="btnSiguiente">Siguiente</button>
+  </div>
+
+</div>
+
+<div class="brush-cursor" id="brushCursor"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

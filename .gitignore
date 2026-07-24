@@ -1,0 +1,20 @@
+# entornos y builds (no se versionan, se regeneran)
+dev_venv/
+build/
+dist/
+installer_output/
+__pycache__/
+*.pyc
+
+# binarios vendorizados de ffmpeg (pesados, se descargan aparte)
+ffmpeg/
+ffmpeg.exe
+ffplay.exe
+ffprobe.exe
+av*.dll
+sw*.dll
+
+# assets de prueba y logs locales
+test_assets/
+*.log
+*.spec.bak
