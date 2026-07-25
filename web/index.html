@@ -27,15 +27,17 @@
   <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
   <symbol id="i-droplet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s7 8.5 7 13a7 7 0 0 1-14 0c0-4.5 7-13 7-13z"/></symbol>
   <symbol id="i-spark" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5z"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.5 12.5L20 3M20 3h-4M20 3v4"/></symbol>
 </svg>
 
 <div class="app" id="app">
 
   <div class="topbar">
     <div class="brand"><svg width="20" height="20"><use href="#i-logo"/></svg>PixelClean</div>
-    <button class="plan-badge" id="btnPlan" title="Ver plan / activar Pro">Gratis</button>
+    <span class="plan-badge" id="btnPlan">Gratis</span>
     <div class="steps" id="steps"></div>
     <div class="theme-switcher">
+      <button class="icon-toggle" id="btnLicencia" title="Activar licencia Pro"><svg width="15" height="15"><use href="#i-key"/></svg></button>
       <svg width="15" height="15" class="theme-icon theme-icon-sun"><use href="#i-sun"/></svg>
       <button class="theme-toggle" id="themeToggle" title="Cambiar tema"></button>
       <svg width="15" height="15" class="theme-icon theme-icon-moon"><use href="#i-moon"/></svg>
@@ -171,6 +173,21 @@
 </div>
 
 <div class="brush-cursor" id="brushCursor"></div>
+
+<div class="licencia-overlay" id="licenciaOverlay">
+  <div class="licencia-modal card">
+    <button class="licencia-close" id="licenciaClose" aria-label="Cerrar">✕</button>
+    <div class="licencia-icon"><svg width="20" height="20"><use href="#i-key"/></svg></div>
+    <h3>Activar PixelClean Pro</h3>
+    <p class="licencia-status" id="licenciaStatus"></p>
+    <input type="text" class="licencia-input" id="licenciaInput" placeholder="PXCL-XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+    <p class="licencia-msg" id="licenciaMsg"></p>
+    <div class="licencia-actions">
+      <button class="btn btn-ghost" id="licenciaCancelar">Cerrar</button>
+      <button class="btn btn-primary" id="licenciaActivar">Activar</button>
+    </div>
+  </div>
+</div>
 
 <script src="app.js"></script>
 </body>

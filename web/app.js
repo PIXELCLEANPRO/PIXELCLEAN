@@ -94,25 +94,65 @@ async function refrescarPlanBadge() {
   }
 }
 
-document.getElementById("btnPlan").addEventListener("click", async () => {
+/* ---------------- Modal: activar licencia ---------------- */
+const licenciaOverlay = document.getElementById("licenciaOverlay");
+const licenciaInput = document.getElementById("licenciaInput");
+const licenciaMsg = document.getElementById("licenciaMsg");
+const licenciaStatus = document.getElementById("licenciaStatus");
+
+async function abrirModalLicencia() {
+  licenciaMsg.textContent = "";
+  licenciaMsg.className = "licencia-msg";
+  licenciaInput.value = "";
+  licenciaStatus.textContent = "Consultando tu plan...";
+  licenciaOverlay.classList.add("open");
+  licenciaInput.focus();
+
   const estado = await api.estado_licencia().catch(() => null);
-  if (estado && estado.pro) {
-    alert("Ya tenes PixelClean Pro activado. Gracias por bancar el proyecto!");
-    return;
-  }
-  const clave = prompt(
-    (estado ? `Te quedan ${estado.restantes} de ${estado.limite} clips gratis hoy.\n\n` : "") +
-    "Si compraste PixelClean Pro, pega tu clave de licencia aca (o cancela para cerrar):"
-  );
-  if (!clave) return;
-  const resultado = await api.activar_licencia(clave).catch((err) => ({ok: false, error: String(err)}));
-  if (resultado.ok) {
-    alert("Listo, PixelClean Pro activado. Gracias!");
+  if (!estado) {
+    licenciaStatus.textContent = "";
+  } else if (estado.pro) {
+    licenciaStatus.textContent = "Ya tenes PixelClean Pro activado. Gracias por bancar el proyecto!";
+    licenciaInput.style.display = "none";
+    document.getElementById("licenciaActivar").style.display = "none";
   } else {
-    alert("No se pudo activar: " + (resultado.error || "clave invalida"));
+    licenciaStatus.textContent = `Version gratis: te quedan ${estado.restantes} de ${estado.limite} clips hoy. Si comprastes Pro, pega tu clave aca.`;
+    licenciaInput.style.display = "";
+    document.getElementById("licenciaActivar").style.display = "";
   }
-  refrescarPlanBadge();
-});
+}
+
+function cerrarModalLicencia() {
+  licenciaOverlay.classList.remove("open");
+}
+
+document.getElementById("btnLicencia").addEventListener("click", abrirModalLicencia);
+document.getElementById("licenciaClose").addEventListener("click", cerrarModalLicencia);
+document.getElementById("licenciaCancelar").addEventListener("click", cerrarModalLicencia);
+licenciaOverlay.addEventListener("click", (e) => { if (e.target === licenciaOverlay) cerrarModalLicencia(); });
+window.addEventListener("keydown", (e) => { if (e.key === "Escape" && licenciaOverlay.classList.contains("open")) cerrarModalLicencia(); });
+
+async function activarLicenciaDesdeModal() {
+  const clave = licenciaInput.value.trim();
+  if (!clave) return;
+  const btnActivar = document.getElementById("licenciaActivar");
+  btnActivar.disabled = true;
+  const resultado = await api.activar_licencia(clave).catch((err) => ({ok: false, error: String(err)}));
+  btnActivar.disabled = false;
+  if (resultado.ok) {
+    licenciaMsg.textContent = "Listo, PixelClean Pro activado. Gracias!";
+    licenciaMsg.className = "licencia-msg ok";
+    licenciaStatus.textContent = "";
+    licenciaInput.style.display = "none";
+    btnActivar.style.display = "none";
+    refrescarPlanBadge();
+  } else {
+    licenciaMsg.textContent = resultado.error || "Esa clave no es valida.";
+    licenciaMsg.className = "licencia-msg err";
+  }
+}
+document.getElementById("licenciaActivar").addEventListener("click", activarLicenciaDesdeModal);
+licenciaInput.addEventListener("keydown", (e) => { if (e.key === "Enter") activarLicenciaDesdeModal(); });
 
 refrescarPlanBadge();
 
@@ -770,7 +810,8 @@ async function procesarTodo() {
       `Llegaste al limite de la version gratis: ${estadoPrevio.limite} clips por dia (te quedan ${estadoPrevio.restantes}).`,
       "err"
     );
-    logLinea("Activa PixelClean Pro (boton de arriba) para procesar sin limite diario.", "err");
+    logLinea("Activa PixelClean Pro (boton con la llave, arriba) para procesar sin limite diario.", "err");
+    abrirModalLicencia();
     return;
   }
 
