@@ -83,7 +83,7 @@ def motor_blur(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ruta_salida
         "-i", ruta_video, "-loop", "1", "-i", ruta_mascara_bn,
         "-filter_complex", filtro,
         "-map", etiqueta_salida, "-map", "0:a?",
-        *codec_args, "-threads", "0", "-c:a", "copy", "-shortest",
+        *codec_args, "-threads", "0", "-c:a", "aac", "-b:a", "192k", "-shortest",
         "-progress", "pipe:1", "-nostats",
         ruta_salida,
     ]
@@ -182,7 +182,7 @@ def _pipeline_por_frame(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ru
         "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{ancho}x{alto}", "-r", str(fps), "-i", "pipe:0",
         "-i", ruta_video,
         "-map", "0:v", "-map", "1:a?",
-        *codec_args, "-threads", "0", "-c:a", "copy", "-shortest",
+        *codec_args, "-threads", "0", "-c:a", "aac", "-b:a", "192k", "-shortest",
         ruta_salida,
     ]
 
