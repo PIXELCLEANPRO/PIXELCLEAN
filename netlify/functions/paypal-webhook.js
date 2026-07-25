@@ -54,9 +54,10 @@ async function obtenerEmailComprador(resource, accessToken) {
   return (orden.payer && orden.payer.email_address) || null;
 }
 
-async function enviarEmailConClave(destinatario) {
+async function avisarVentaAlDueno(emailComprador, monto, moneda) {
   const clave = process.env.PIXELCLEAN_LICENSE_KEY;
   const from = process.env.RESEND_FROM || "PixelClean <onboarding@resend.dev>";
+  const destinatario = process.env.NOTIFICATION_EMAIL;
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -66,13 +67,13 @@ async function enviarEmailConClave(destinatario) {
     body: JSON.stringify({
       from,
       to: [destinatario],
-      subject: "Tu clave de PixelClean Pro",
+      subject: `Nueva venta PixelClean Pro (${monto} ${moneda}) - reenviar clave`,
       html: `
-        <p>Gracias por comprar <strong>PixelClean Pro</strong>.</p>
-        <p>Tu clave de licencia es:</p>
+        <p>Se registro un pago nuevo de PixelClean Pro.</p>
+        <p><strong>Comprador:</strong> ${emailComprador || "(no se pudo determinar el email, revisar en PayPal)"}</p>
+        <p><strong>Monto:</strong> ${monto} ${moneda}</p>
+        <p>Reenviale esta clave manualmente:</p>
         <p style="font-family:monospace;font-size:18px;background:#f4f4f8;padding:12px 16px;border-radius:8px;display:inline-block">${clave}</p>
-        <p>Activala desde el icono de la llave, arriba a la derecha en la app, y pegala ahi.</p>
-        <p>Cualquier problema, responde este email.</p>
       `,
     }),
   });
@@ -104,12 +105,10 @@ exports.handler = async (event) => {
 
     if (body.event_type === "PAYMENT.CAPTURE.COMPLETED") {
       const email = await obtenerEmailComprador(body.resource, accessToken);
-      if (email) {
-        await enviarEmailConClave(email);
-        console.log("Clave enviada a", email);
-      } else {
-        console.error("No se pudo determinar el email del comprador", JSON.stringify(body.resource));
-      }
+      const monto = body.resource.amount && body.resource.amount.value;
+      const moneda = body.resource.amount && body.resource.amount.currency_code;
+      await avisarVentaAlDueno(email, monto, moneda);
+      console.log("Aviso de venta enviado, comprador:", email);
     }
 
     return { statusCode: 200, body: "ok" };
