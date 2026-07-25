@@ -4,6 +4,8 @@ El backend (motores de reparacion, lectura de metadata) es el mismo que
 usaba la version CustomTkinter; solo cambia la capa visual.
 """
 import base64
+import datetime
+import hashlib
 import io
 import json
 import logging
@@ -55,6 +57,16 @@ RESOLUCIONES = {
     "720p (1280x720)": (1280, 720),
 }
 
+# Hash SHA-256 de la clave Pro (nunca se guarda la clave en texto plano).
+LICENCIA_HASH_PRO = "ab45d00dee70232649d49b004f952ecb6c0ae0a00663c15f5d7b4c2a3929d071"
+LIMITE_GRATIS_DIARIO = 5
+
+
+def _ruta_datos_usuario(nombre_archivo):
+    carpeta = os.path.join(os.environ["LOCALAPPDATA"], "PixelClean")
+    os.makedirs(carpeta, exist_ok=True)
+    return os.path.join(carpeta, nombre_archivo)
+
 
 def _pil_a_b64(img, formato="PNG"):
     buf = io.BytesIO()
@@ -92,6 +104,48 @@ class Api:
     def set_ventana(self, ventana):
         self._ventana = ventana
 
+    # ---------- licencia / limite gratis ----------
+    def _es_pro(self):
+        try:
+            with open(_ruta_datos_usuario("licencia.json"), "r", encoding="utf-8") as f:
+                datos = json.load(f)
+            return datos.get("hash") == LICENCIA_HASH_PRO
+        except Exception:
+            return False
+
+    def _leer_uso(self):
+        hoy = datetime.date.today().isoformat()
+        try:
+            with open(_ruta_datos_usuario("uso.json"), "r", encoding="utf-8") as f:
+                datos = json.load(f)
+            if datos.get("fecha") != hoy:
+                return {"fecha": hoy, "clips": 0}
+            return datos
+        except Exception:
+            return {"fecha": hoy, "clips": 0}
+
+    def _incrementar_uso(self, cantidad=1):
+        datos = self._leer_uso()
+        datos["clips"] = datos.get("clips", 0) + cantidad
+        with open(_ruta_datos_usuario("uso.json"), "w", encoding="utf-8") as f:
+            json.dump(datos, f)
+
+    def estado_licencia(self):
+        if self._es_pro():
+            return {"pro": True, "restantes": None, "limite": None}
+        uso = self._leer_uso()
+        restantes = max(LIMITE_GRATIS_DIARIO - uso.get("clips", 0), 0)
+        return {"pro": False, "restantes": restantes, "limite": LIMITE_GRATIS_DIARIO}
+
+    def activar_licencia(self, clave):
+        clave = (clave or "").strip().upper()
+        h = hashlib.sha256(clave.encode("utf-8")).hexdigest()
+        if h == LICENCIA_HASH_PRO:
+            with open(_ruta_datos_usuario("licencia.json"), "w", encoding="utf-8") as f:
+                json.dump({"hash": h}, f)
+            return {"ok": True}
+        return {"ok": False, "error": "Esa clave no es valida."}
+
     # ---------- paso clip ----------
     # Los dialogos nativos de Windows necesitan correr en el mismo hilo que
     # pywebview ya usa para las llamadas js_api (por temas de threading de COM).
@@ -118,7 +172,8 @@ class Api:
             segundo = (info["duracion_seg"] / 2) if info["duracion_seg"] else 1.0
             subprocess.run([FFMPEG_BIN, "-y", "-hide_banner", "-loglevel", "error",
                              "-ss", str(segundo), "-i", ruta_clip, "-frames:v", "1", ruta_tmp],
-                            capture_output=True, timeout=30)
+                            capture_output=True, timeout=30,
+                            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
             img = Image.open(ruta_tmp).convert("RGB")
             self._frame_actual = img
             os.remove(ruta_tmp)
@@ -184,6 +239,11 @@ class Api:
     def procesar_todo(self, payload):
         try:
             total = len(payload["clips"])
+            if not self._es_pro():
+                uso = self._leer_uso()
+                restantes = max(LIMITE_GRATIS_DIARIO - uso.get("clips", 0), 0)
+                if total > restantes:
+                    return {"ok": False, "error": "limite_gratis", "restantes": restantes, "limite": LIMITE_GRATIS_DIARIO}
             self._evento_cancelar.clear()
             with self._progreso_lock:
                 self.progreso = {"completados": 0, "total": total, "por_clip": [0.0] * total,
@@ -243,6 +303,8 @@ class Api:
                 mensaje = (f"OK: {os.path.basename(clip)} -> {os.path.basename(resultado)}" if exito
                            else f"ERROR: {os.path.basename(clip)} -> {resultado}")
                 self._agregar_log(mensaje, exito)
+                if exito and not self._es_pro():
+                    self._incrementar_uso(1)
                 with self._progreso_lock:
                     self.progreso["completados"] = idx + 1
 
@@ -326,7 +388,7 @@ def main():
     # por-usuario en LOCALAPPDATA.
     carpeta_datos = os.path.join(os.environ["LOCALAPPDATA"], "PixelClean", "webview2_data")
     os.makedirs(carpeta_datos, exist_ok=True)
-    webview.start(debug=True, private_mode=False, storage_path=carpeta_datos)
+    webview.start(private_mode=False, storage_path=carpeta_datos)
 
 
 if __name__ == "__main__":

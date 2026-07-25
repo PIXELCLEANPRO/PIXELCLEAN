@@ -3,8 +3,11 @@ Lectura de metadata de camara embebida en el archivo de video via ffprobe.
 Muestra solo lo que el archivo realmente tiene: no inventa ni completa datos.
 """
 import json
+import os
 import re
 import subprocess
+
+_SIN_VENTANA = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 
 
 MARCAS_CONOCIDAS = {
@@ -75,7 +78,7 @@ def leer_metadata_camara(ffprobe_bin, ruta_video):
         ffprobe_bin, "-v", "error", "-print_format", "json",
         "-show_format", "-show_streams", ruta_video,
     ]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=20, creationflags=_SIN_VENTANA)
     datos = json.loads(r.stdout)
 
     tags_crudos = {}

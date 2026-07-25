@@ -65,13 +65,56 @@ const mockApi = {
     return {ok: true};
   },
   cancelar_procesamiento: async () => { if (mockApi._progreso) mockApi._progreso.terminado = true; return {ok: true}; },
+  estado_licencia: async () => ({pro: false, restantes: 5, limite: 5}),
+  activar_licencia: async () => ({ok: false, error: "Modo de prueba en navegador: no se puede validar una clave real aca."}),
 };
 
 // nota: el flujo real consulta el progreso por fetch('/progreso') servido por el mismo
 // servidor Python (ver webview_app.py), no por api.obtener_progreso -- eso evita un pedido
 // entre origenes distintos que resulto poco confiable en pywebview+WinForms+WebView2.
 let api = (window.pywebview && window.pywebview.api) ? window.pywebview.api : mockApi;
-window.addEventListener("pywebviewready", () => { api = window.pywebview.api; });
+window.addEventListener("pywebviewready", () => { api = window.pywebview.api; refrescarPlanBadge(); });
+
+/* ---------------- Plan gratis / Pro ---------------- */
+async function refrescarPlanBadge() {
+  const btn = document.getElementById("btnPlan");
+  if (!btn) return;
+  try {
+    const estado = await api.estado_licencia();
+    btn.classList.remove("is-pro", "is-low");
+    if (estado.pro) {
+      btn.textContent = "PRO";
+      btn.classList.add("is-pro");
+    } else {
+      btn.textContent = `Gratis · ${estado.restantes}/${estado.limite} hoy`;
+      if (estado.restantes <= 1) btn.classList.add("is-low");
+    }
+  } catch (err) {
+    // si no se puede consultar, dejamos el badge por defecto sin romper la app
+  }
+}
+
+document.getElementById("btnPlan").addEventListener("click", async () => {
+  const estado = await api.estado_licencia().catch(() => null);
+  if (estado && estado.pro) {
+    alert("Ya tenes PixelClean Pro activado. Gracias por bancar el proyecto!");
+    return;
+  }
+  const clave = prompt(
+    (estado ? `Te quedan ${estado.restantes} de ${estado.limite} clips gratis hoy.\n\n` : "") +
+    "Si compraste PixelClean Pro, pega tu clave de licencia aca (o cancela para cerrar):"
+  );
+  if (!clave) return;
+  const resultado = await api.activar_licencia(clave).catch((err) => ({ok: false, error: String(err)}));
+  if (resultado.ok) {
+    alert("Listo, PixelClean Pro activado. Gracias!");
+  } else {
+    alert("No se pudo activar: " + (resultado.error || "clave invalida"));
+  }
+  refrescarPlanBadge();
+});
+
+refrescarPlanBadge();
 
 /* ---------------- Topbar: pasos + tema ---------------- */
 function renderSteps() {
@@ -718,6 +761,19 @@ document.getElementById("btnCancelar").addEventListener("click", () => {
 async function procesarTodo() {
   const btn = document.getElementById("btnSiguiente");
   const btnCancelar = document.getElementById("btnCancelar");
+
+  const estadoPrevio = await api.estado_licencia().catch(() => null);
+  if (estadoPrevio && !estadoPrevio.pro && state.clips.length > estadoPrevio.restantes) {
+    document.getElementById("logBox").innerHTML = "";
+    _logsMostrados = 0;
+    logLinea(
+      `Llegaste al limite de la version gratis: ${estadoPrevio.limite} clips por dia (te quedan ${estadoPrevio.restantes}).`,
+      "err"
+    );
+    logLinea("Activa PixelClean Pro (boton de arriba) para procesar sin limite diario.", "err");
+    return;
+  }
+
   btn.disabled = true;
   btnCancelar.style.display = "inline-flex";
   btnCancelar.disabled = false;
@@ -773,6 +829,7 @@ async function procesarTodo() {
       btn.disabled = false;
       btnCancelar.style.display = "none";
       document.querySelector(".ring-wrap").classList.remove("procesando");
+      refrescarPlanBadge();
     }
   }, 500);
 }

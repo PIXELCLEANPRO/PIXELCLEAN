@@ -18,3 +18,7 @@ sw*.dll
 test_assets/
 *.log
 *.spec.bak
+.gh_cli/
+.node_portable/
+.netlify_cli/
+.netlify/

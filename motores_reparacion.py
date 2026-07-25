@@ -18,13 +18,15 @@ try:
 except ImportError:
     cv2 = None
 
+_SIN_VENTANA = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+
 
 def _info_basica(ffprobe_bin, ruta_video):
     cmd = [
         ffprobe_bin, "-v", "error", "-print_format", "json",
         "-show_format", "-show_streams", ruta_video,
     ]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=20, creationflags=_SIN_VENTANA)
     datos = json.loads(r.stdout)
     video_stream = next((s for s in datos.get("streams", []) if s.get("codec_type") == "video"), {})
     formato = datos.get("format", {})
@@ -95,7 +97,8 @@ def _correr_ffmpeg_con_progreso(cmd, ffprobe_bin, ruta_video, ruta_salida, callb
     duracion = _info_basica(ffprobe_bin, ruta_video)["duracion_seg"]
     try:
         proceso = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                    text=True, bufsize=1, universal_newlines=True)
+                                    text=True, bufsize=1, universal_newlines=True,
+                                    creationflags=_SIN_VENTANA)
     except Exception as e:
         return False, f"No se pudo iniciar ffmpeg: {e}"
 
@@ -184,8 +187,10 @@ def _pipeline_por_frame(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ru
     ]
 
     try:
-        proc_decode = subprocess.Popen(cmd_decode, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-        proc_encode = subprocess.Popen(cmd_encode, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc_decode = subprocess.Popen(cmd_decode, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                        creationflags=_SIN_VENTANA)
+        proc_encode = subprocess.Popen(cmd_encode, stdin=subprocess.PIPE, stderr=subprocess.PIPE,
+                                        creationflags=_SIN_VENTANA)
     except Exception as e:
         return False, f"No se pudo iniciar ffmpeg: {e}"
 

@@ -1,54 +1,69 @@
 <title>PixelClean — Reparación de píxeles quemados</title>
 <meta name="description" content="PixelClean detecta y repara píxeles quemados o muertos del sensor en tus videos, cuadro a cuadro, 100% en tu computadora." />
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5750366535948261"
+     crossorigin="anonymous"></script>
 
 <style>
   /* ---------- tokens ---------- */
   :root {
-    --ink: #12151b;
-    --ink-soft: #565d6b;
-    --ink-faint: #9aa1b0;
-    --paper: #f3f4f8;
-    --panel: #ffffff;
-    --panel-2: #eceef4;
-    --line: #dde0e8;
-    --signal: #2f6fed;
+    --ink: #1d1d1f;
+    --ink-soft: rgba(29, 29, 31, .64);
+    --ink-faint: rgba(29, 29, 31, .4);
+    --paper: #eef1f8;
+    --panel: rgba(255, 255, 255, .5);
+    --panel-2: rgba(255, 255, 255, .3);
+    --line: rgba(20, 20, 40, .1);
+    --signal: #0071e3;
     --signal-ink: #ffffff;
-    --stuck: #1f9d4a;
-    --shadow: 0 1px 2px rgba(20, 22, 29, .06), 0 16px 32px rgba(20, 22, 29, .08);
+    --accent-2: #8b5cf6;
+    --accent-3: #12b8ab;
+    --stuck: #12a454;
+    --glass-border: rgba(255, 255, 255, .6);
+    --blob-opacity: .4;
+    --shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 1px 2px rgba(20, 20, 40, .05), 0 30px 60px -18px rgba(20, 20, 40, .22);
 
-    --font-display: "Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif;
-    --font-body: Georgia, "Iowan Old Style", "Times New Roman", serif;
-    --font-mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
 
     --wrap: 1180px;
+    --r-lg: 28px;
+    --r-md: 20px;
+    --r-sm: 13px;
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --ink: #eef1f6;
-      --ink-soft: #9aa0af;
-      --ink-faint: #565d6b;
-      --paper: #0a0c10;
-      --panel: #12151b;
-      --panel-2: #171b23;
-      --line: #242933;
-      --signal: #4c86ff;
+      --ink: #f5f5f7;
+      --ink-soft: rgba(245, 245, 247, .68);
+      --ink-faint: rgba(245, 245, 247, .42);
+      --paper: #0b0c10;
+      --panel: rgba(32, 33, 40, .45);
+      --panel-2: rgba(32, 33, 40, .3);
+      --line: rgba(255, 255, 255, .12);
+      --signal: #409cff;
       --signal-ink: #06070a;
-      --stuck: #59ff8f;
-      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 24px 48px rgba(0, 0, 0, .55);
+      --accent-2: #a78bfa;
+      --accent-3: #2fe0cf;
+      --stuck: #4be890;
+      --glass-border: rgba(255, 255, 255, .14);
+      --blob-opacity: .6;
+      --shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .4), 0 30px 60px -18px rgba(0, 0, 0, .6);
     }
   }
   :root[data-theme="dark"] {
-    --ink: #eef1f6; --ink-soft: #9aa0af; --ink-faint: #565d6b;
-    --paper: #0a0c10; --panel: #12151b; --panel-2: #171b23; --line: #242933;
-    --signal: #4c86ff; --signal-ink: #06070a; --stuck: #59ff8f;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 24px 48px rgba(0, 0, 0, .55);
+    --ink: #f5f5f7; --ink-soft: rgba(245, 245, 247, .68); --ink-faint: rgba(245, 245, 247, .42);
+    --paper: #0b0c10; --panel: rgba(32, 33, 40, .45); --panel-2: rgba(32, 33, 40, .3); --line: rgba(255, 255, 255, .12);
+    --signal: #409cff; --signal-ink: #06070a; --accent-2: #a78bfa; --accent-3: #2fe0cf; --stuck: #4be890;
+    --glass-border: rgba(255, 255, 255, .14); --blob-opacity: .6;
+    --shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .4), 0 30px 60px -18px rgba(0, 0, 0, .6);
   }
   :root[data-theme="light"] {
-    --ink: #12151b; --ink-soft: #565d6b; --ink-faint: #9aa1b0;
-    --paper: #f3f4f8; --panel: #ffffff; --panel-2: #eceef4; --line: #dde0e8;
-    --signal: #2f6fed; --signal-ink: #ffffff; --stuck: #1f9d4a;
-    --shadow: 0 1px 2px rgba(20, 22, 29, .06), 0 16px 32px rgba(20, 22, 29, .08);
+    --ink: #1d1d1f; --ink-soft: rgba(29, 29, 31, .64); --ink-faint: rgba(29, 29, 31, .4);
+    --paper: #eef1f8; --panel: rgba(255, 255, 255, .5); --panel-2: rgba(255, 255, 255, .3); --line: rgba(20, 20, 40, .1);
+    --signal: #0071e3; --signal-ink: #ffffff; --accent-2: #8b5cf6; --accent-3: #12b8ab; --stuck: #12a454;
+    --glass-border: rgba(255, 255, 255, .6); --blob-opacity: .4;
+    --shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 1px 2px rgba(20, 20, 40, .05), 0 30px 60px -18px rgba(20, 20, 40, .22);
   }
 
   * { box-sizing: border-box; }
@@ -63,19 +78,32 @@
     font-size: 17px;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
-    background-image:
-      linear-gradient(var(--line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--line) 1px, transparent 1px);
-    background-size: 64px 64px;
-    background-attachment: fixed;
-    background-position: center;
+    position: relative;
+    isolation: isolate;
   }
-  @media (max-width: 720px) { body { background-size: 40px 40px; } }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -15%;
+    z-index: -1;
+    background:
+      radial-gradient(32% 34% at 18% 22%, var(--signal) 0%, transparent 72%),
+      radial-gradient(36% 38% at 88% 12%, var(--accent-2) 0%, transparent 72%),
+      radial-gradient(40% 42% at 46% 92%, var(--accent-3) 0%, transparent 72%);
+    filter: blur(90px) saturate(160%);
+    opacity: var(--blob-opacity);
+    animation: drift 42s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(-3%, 3%, 0) scale(1.06); }
+  }
+  @media (prefers-reduced-motion: reduce) { body::before { animation: none; } }
 
   h1, h2, h3, .display {
     font-family: var(--font-display);
-    font-weight: 800;
-    letter-spacing: -0.02em;
+    font-weight: 700;
+    letter-spacing: -0.022em;
     text-wrap: balance;
     margin: 0;
     color: var(--ink);
@@ -86,7 +114,7 @@
   .eyebrow {
     font-family: var(--font-mono);
     font-size: 12.5px;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--signal);
     display: flex;
@@ -104,39 +132,60 @@
   .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 28px; }
   section { position: relative; }
 
+  /* ---------- glass ---------- */
+  .glass {
+    background: var(--panel);
+    border: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    backdrop-filter: blur(28px) saturate(180%);
+    box-shadow: var(--shadow);
+  }
+
   .btn {
     font-family: var(--font-display);
-    font-weight: 700;
+    font-weight: 600;
     font-size: 14.5px;
-    letter-spacing: 0.01em;
-    border-radius: 8px;
-    padding: 13px 22px;
+    letter-spacing: 0;
+    border-radius: 999px;
+    padding: 13px 24px;
     border: 1px solid transparent;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    transition: transform .18s ease, background .18s ease, border-color .18s ease;
+    transition: transform .18s ease, filter .18s ease, background .18s ease, box-shadow .18s ease;
     text-decoration: none;
   }
   .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
   .btn:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
-  .btn-primary { background: var(--signal); color: var(--signal-ink); }
-  .btn-primary:hover { background: color-mix(in srgb, var(--signal) 85%, white); }
-  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
-  .btn-ghost:hover { border-color: var(--ink-faint); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--signal), var(--accent-2));
+    color: var(--signal-ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 10px 24px -8px color-mix(in srgb, var(--signal) 65%, transparent);
+  }
+  .btn-primary:hover { filter: brightness(1.07); }
+  .btn-ghost {
+    background: var(--panel-2);
+    color: var(--ink);
+    border-color: var(--glass-border);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+  .btn-ghost:hover { background: var(--panel); }
 
   /* ---------- nav ---------- */
   header.nav {
     position: sticky; top: 0; z-index: 40;
-    backdrop-filter: blur(10px);
-    background: color-mix(in srgb, var(--paper) 82%, transparent);
-    border-bottom: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    background: color-mix(in srgb, var(--paper) 55%, transparent);
+    border-bottom: 1px solid var(--glass-border);
   }
   .nav-row { display: flex; align-items: center; justify-content: space-between; height: 68px; }
-  .brand { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 800; font-size: 17px; letter-spacing: -0.01em; }
+  .brand { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
   .brand svg { color: var(--signal); }
-  .nav-links { display: flex; gap: 30px; font-family: var(--font-display); font-weight: 600; font-size: 14px; }
+  .nav-links { display: flex; gap: 30px; font-family: var(--font-display); font-weight: 590; font-size: 14px; }
   .nav-links a { color: var(--ink-soft); text-decoration: none; transition: color .15s; }
   .nav-links a:hover { color: var(--ink); }
   .nav-cta { display: flex; gap: 10px; }
@@ -147,8 +196,8 @@
   .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
   @media (max-width: 920px) { .hero-grid { grid-template-columns: 1fr; } }
 
-  .hero h1 { font-size: clamp(38px, 5.4vw, 68px); line-height: 1.03; margin: 16px 0 22px; }
-  .hero h1 em { font-style: normal; color: var(--signal); }
+  .hero h1 { font-size: clamp(38px, 5.4vw, 66px); line-height: 1.05; margin: 16px 0 22px; }
+  .hero h1 em { font-style: normal; background: linear-gradient(120deg, var(--signal), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .hero .lede { font-size: 19px; color: var(--ink-soft); max-width: 46ch; margin-bottom: 30px; }
   .hero .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
   .hero .fine {
@@ -157,30 +206,21 @@
   }
   .hero .fine svg { color: var(--stuck); }
 
-  .hud {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    box-shadow: var(--shadow);
-    overflow: hidden;
-  }
-  .hud-top {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 16px; border-bottom: 1px solid var(--line);
-    font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); letter-spacing: .04em;
-  }
-  .hud-dot { display: flex; gap: 6px; }
-  .hud-dot span { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
-  .hud canvas { display: block; width: 100%; height: auto; }
-  .hud-readout {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
-    background: var(--line);
-    border-top: 1px solid var(--line);
-  }
-  .hud-readout div { background: var(--panel); padding: 12px 14px; }
-  .hud-readout .k { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); letter-spacing: .06em; text-transform: uppercase; }
-  .hud-readout .v { font-family: var(--font-mono); font-size: 13.5px; color: var(--ink); margin-top: 3px; }
-  .hud-readout .v.ok { color: var(--stuck); }
+  /* ---------- pricing (hero) ---------- */
+  .pricing-hero { display: flex; flex-direction: column; gap: 16px; }
+  .price-card { border-radius: var(--r-lg); padding: 28px 26px; }
+  .price-pro { border-color: color-mix(in srgb, var(--signal) 45%, var(--glass-border)); }
+  .price-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .price-name { font-family: var(--font-display); font-weight: 700; font-size: 17px; }
+  .price-tag { font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); border: 1px solid var(--glass-border); border-radius: 999px; padding: 3px 10px; }
+  .price-tag-pro { color: var(--signal-ink); background: linear-gradient(135deg, var(--signal), var(--accent-2)); border-color: transparent; }
+  .price-amount { font-family: var(--font-display); font-weight: 700; font-size: 40px; letter-spacing: -0.02em; margin-bottom: 8px; }
+  .price-amount span { font-size: 15px; font-weight: 600; color: var(--ink-faint); letter-spacing: 0; }
+  .price-desc { color: var(--ink-soft); font-size: 14.5px; margin-bottom: 18px; }
+  .price-list { list-style: none; margin: 0 0 22px; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+  .price-list li { font-size: 14px; color: var(--ink-soft); padding-left: 22px; position: relative; }
+  .price-list li::before { content: "✓"; position: absolute; left: 0; color: var(--stuck); font-weight: 700; }
+  .price-card .btn { width: 100%; justify-content: center; }
 
   /* ---------- reveal ---------- */
   .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
@@ -190,49 +230,47 @@
   }
 
   /* ---------- section shell ---------- */
-  .section { padding: 84px 0; border-top: 1px solid var(--line); }
-  .section-head { max-width: 640px; margin-bottom: 48px; }
+  .section { padding: 78px 0; }
+  .section-head { max-width: 640px; margin-bottom: 44px; }
   .section-head h2 { font-size: clamp(26px, 3vw, 36px); margin: 14px 0 12px; }
   .section-head p { color: var(--ink-soft); font-size: 17px; }
 
   /* ---------- steps ---------- */
-  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--line); }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   @media (max-width: 860px) { .steps { grid-template-columns: 1fr; } }
-  .step { background: var(--panel); padding: 30px 26px; position: relative; }
+  .step { border-radius: var(--r-md); padding: 28px 24px; position: relative; }
   .step .n { font-family: var(--font-mono); font-size: 12px; color: var(--signal); letter-spacing: .08em; }
   .step h3 { font-size: 18px; margin: 10px 0 8px; }
   .step p { color: var(--ink-soft); font-size: 14.5px; }
-  .step .ic { width: 34px; height: 34px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; color: var(--signal); }
+  .step .ic { width: 34px; height: 34px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; color: var(--signal); }
 
   /* ---------- engines ---------- */
-  .engines { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .engines { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   @media (max-width: 760px) { .engines { grid-template-columns: 1fr; } }
-  .engine {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 30px;
-  }
+  .engine { border-radius: var(--r-md); padding: 30px; }
   .engine .tag {
     font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
-    color: var(--ink-faint); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; display: inline-block;
+    color: var(--ink-faint); border: 1px solid var(--glass-border); border-radius: 999px; padding: 3px 10px; display: inline-block;
   }
   .engine h3 { font-size: 22px; margin: 16px 0 10px; }
   .engine p { color: var(--ink-soft); font-size: 15px; margin-bottom: 18px; }
   .engine .bar-row { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); margin-bottom: 8px; }
   .engine .bar { flex: 1; height: 5px; border-radius: 4px; background: var(--panel-2); overflow: hidden; }
-  .engine .bar i { display: block; height: 100%; background: var(--signal); border-radius: 4px; }
+  .engine .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--signal), var(--accent-2)); border-radius: 4px; }
 
   /* ---------- features ---------- */
-  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   @media (max-width: 860px) { .features { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 560px) { .features { grid-template-columns: 1fr; } }
-  .feature { background: var(--panel); padding: 26px 24px; }
+  .feature { border-radius: var(--r-md); padding: 24px 22px; }
   .feature .ic { color: var(--signal); margin-bottom: 14px; }
-  .feature h3 { font-size: 15.5px; font-family: var(--font-display); font-weight: 700; margin-bottom: 7px; letter-spacing: 0; }
+  .feature h3 { font-size: 15.5px; font-family: var(--font-display); font-weight: 650; margin-bottom: 7px; letter-spacing: 0; }
   .feature p { font-size: 14px; color: var(--ink-soft); }
 
   /* ---------- compare ---------- */
-  .compare-shell { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 8px; }
+  .compare-shell { border-radius: var(--r-lg); padding: 8px; }
   .compare {
-    position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 16/8.4; cursor: ew-resize; user-select: none; touch-action: none;
+    position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 16/8.4; cursor: ew-resize; user-select: none; touch-action: none;
   }
   .compare canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .compare .after-mask { position: absolute; inset: 0; overflow: hidden; }
@@ -242,19 +280,21 @@
   }
   .compare .handle::after {
     content: "⟷"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 38px; height: 38px; border-radius: 50%; background: #fff; color: #111;
+    width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.85); color: #111;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
     display: flex; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 4px 14px rgba(0,0,0,.35);
   }
-  .compare .label { position: absolute; top: 14px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: rgba(10,12,16,.55); color: #fff; backdrop-filter: blur(4px); }
+  .compare .label { position: absolute; top: 14px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: rgba(10,12,16,.5); border: 1px solid rgba(255,255,255,.25); color: #fff; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
   .compare .label.before { left: 14px; }
   .compare .label.after { right: 14px; }
   .compare-caption { display: flex; justify-content: space-between; align-items: center; padding: 14px 12px 8px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); }
 
   /* ---------- faq ---------- */
-  .faq { max-width: 760px; }
-  details.faq-item { border-bottom: 1px solid var(--line); padding: 20px 0; }
+  .faq { max-width: 760px; border-radius: var(--r-md); padding: 8px 28px; }
+  details.faq-item { border-bottom: 1px solid var(--glass-border); padding: 20px 0; }
+  details.faq-item:last-child { border-bottom: none; }
   details.faq-item summary {
-    cursor: pointer; list-style: none; font-family: var(--font-display); font-weight: 700; font-size: 16.5px;
+    cursor: pointer; list-style: none; font-family: var(--font-display); font-weight: 650; font-size: 16.5px;
     display: flex; justify-content: space-between; align-items: center; gap: 16px;
   }
   details.faq-item summary::-webkit-details-marker { display: none; }
@@ -264,16 +304,58 @@
 
   /* ---------- footer / cta ---------- */
   .cta-band {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 56px 44px;
+    border-radius: var(--r-lg); padding: 56px 44px;
     display: flex; justify-content: space-between; align-items: center; gap: 30px; flex-wrap: wrap;
   }
   .cta-band h2 { font-size: clamp(24px, 3vw, 32px); max-width: 22ch; }
-  footer { padding: 48px 0 60px; }
-  .foot-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; padding-top: 40px; margin-top: 40px; border-top: 1px solid var(--line); }
+  footer { padding: 40px 0 60px; }
+  .foot-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; padding-top: 36px; margin-top: 8px; border-top: 1px solid var(--glass-border); }
   .foot-links { display: flex; gap: 26px; font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint); }
   .foot-links a { text-decoration: none; }
   .foot-links a:hover { color: var(--ink); }
   .foot-note { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); }
+
+  /* ---------- donate modal ---------- */
+  .donate-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(10, 10, 16, .45);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .22s ease;
+  }
+  .donate-overlay.open { opacity: 1; pointer-events: auto; }
+  .donate-modal {
+    width: 100%; max-width: 380px;
+    border-radius: var(--r-lg);
+    padding: 32px 28px 26px;
+    text-align: center;
+    position: relative;
+    transform: translateY(10px) scale(.97);
+    transition: transform .22s ease;
+  }
+  .donate-overlay.open .donate-modal { transform: translateY(0) scale(1); }
+  .donate-modal .close {
+    position: absolute; top: 14px; right: 14px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--panel-2); border: 1px solid var(--glass-border);
+    color: var(--ink-soft); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .donate-modal .close:hover { color: var(--ink); }
+  .donate-modal .ico {
+    width: 54px; height: 54px; border-radius: 16px; margin: 0 auto 16px;
+    background: linear-gradient(135deg, var(--signal), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 24px -8px color-mix(in srgb, var(--signal) 60%, transparent);
+  }
+  .donate-modal h3 { font-size: 21px; margin-bottom: 10px; }
+  .donate-modal p { color: var(--ink-soft); font-size: 14.5px; line-height: 1.5; margin-bottom: 22px; }
+  .donate-modal .row { display: flex; flex-direction: column; gap: 10px; }
+  .donate-modal .btn { justify-content: center; width: 100%; }
+  .donate-modal .skip { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); background: none; border: none; cursor: pointer; padding: 6px; }
+  .donate-modal .skip:hover { color: var(--ink-soft); }
 </style>
 
 <header class="nav">
@@ -290,8 +372,8 @@
       <a href="#preguntas">Preguntas</a>
     </nav>
     <div class="nav-cta">
-      <a class="btn btn-ghost" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0-portable/PixelClean_Portable.rar" download>Portable</a>
-      <a class="btn btn-primary" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0/PixelClean_Setup.exe" download>Descargar</a>
+      <a class="btn btn-ghost js-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0-portable/PixelClean_Portable.rar" download>Portable</a>
+      <a class="btn btn-primary js-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0/PixelClean_Setup.exe" download>Descargar</a>
     </div>
   </div>
 </header>
@@ -301,11 +383,11 @@
     <div class="wrap hero-grid">
       <div>
         <span class="eyebrow">Reparación de sensor · 100% local</span>
-        <h1>Tu cámara quemó un<br><em>píxel</em>. Nosotros lo borramos<br>del video, cuadro a cuadro.</h1>
-        <p class="lede">PixelClean detecta el píxel verde quemado o muerto de tu sensor a partir de una sola foto, y repara automáticamente cada cuadro del clip con ffmpeg — sin subir un solo archivo a internet.</p>
+        <h1>Un <em>punto quemado</em> no debería costarte la toma.</h1>
+        <p class="lede">PixelClean marca el píxel quemado o muerto de tu sensor a partir de una sola foto, y repara automáticamente cada cuadro del clip con ffmpeg — sin subir un solo archivo a internet.</p>
         <div class="ctas">
-          <a class="btn btn-primary" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0/PixelClean_Setup.exe" download>Descargar para Windows</a>
-          <a class="btn btn-ghost" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0-portable/PixelClean_Portable.rar" download>Versión portable (.rar)</a>
+          <a class="btn btn-primary js-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0/PixelClean_Setup.exe" download>Descargar para Windows</a>
+          <a class="btn btn-ghost js-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0-portable/PixelClean_Portable.rar" download>Versión portable (.rar)</a>
         </div>
         <div class="fine">
           <svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg>
@@ -313,16 +395,34 @@
         </div>
       </div>
 
-      <div class="hud reveal">
-        <div class="hud-top">
-          <span>SENSOR_SCAN.MP4</span>
-          <div class="hud-dot"><span></span><span></span><span></span></div>
+      <div class="pricing-hero reveal" id="precios">
+        <div class="price-card glass">
+          <div class="price-top">
+            <span class="price-name">Gratis</span>
+            <span class="price-tag">Sin costo</span>
+          </div>
+          <div class="price-amount">$0</div>
+          <p class="price-desc">Hasta 3 clips por día. Ideal para probar la app o resolver un defecto puntual.</p>
+          <ul class="price-list">
+            <li>Los 2 motores de reparación</li>
+            <li>Máscara con pincel completo</li>
+            <li>Metadata de cámara y vista previa en vivo</li>
+          </ul>
+          <a class="btn btn-ghost" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0/PixelClean_Setup.exe" download>Descargar gratis</a>
         </div>
-        <canvas id="heroCanvas" width="900" height="560" role="img" aria-label="Animación de una grilla de sensor sanando un píxel verde quemado con un barrido de reparación"></canvas>
-        <div class="hud-readout">
-          <div><div class="k">Motor</div><div class="v">opencv · inpaint</div></div>
-          <div><div class="k">Píxel detectado</div><div class="v">x214 · y118</div></div>
-          <div><div class="k">Estado</div><div class="v ok">reparado ✓</div></div>
+        <div class="price-card price-pro glass">
+          <div class="price-top">
+            <span class="price-name">Pro</span>
+            <span class="price-tag price-tag-pro">Pago único</span>
+          </div>
+          <div class="price-amount">$70 <span>USD</span></div>
+          <p class="price-desc">Clips ilimitados por día, para siempre. Sin suscripción.</p>
+          <ul class="price-list">
+            <li>Todo lo del plan Gratis</li>
+            <li>Sin límite diario de clips</li>
+            <li>Procesamiento por lotes sin restricción</li>
+          </ul>
+          <a class="btn btn-primary" href="#precios">Comprar Pro</a>
         </div>
       </div>
     </div>
@@ -336,25 +436,25 @@
         <p>El mismo flujo que ves al abrir la app: elegís el clip, marcás el defecto una sola vez, elegís el motor de reparación, y procesás todo el lote.</p>
       </div>
       <div class="steps reveal">
-        <div class="step">
+        <div class="step glass">
           <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h5l2 2h9v10H4z"/></svg></div>
           <div class="n">01 · Clip</div>
           <h3>Cargás tus videos</h3>
           <p>Arrastrá los clips a la ventana o elegilos desde el explorador. PixelClean lee la metadata de cámara automáticamente.</p>
         </div>
-        <div class="step">
+        <div class="step glass">
           <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></div>
           <div class="n">02 · Máscara</div>
           <h3>Marcás el defecto una vez</h3>
           <p>Con un pincel de tamaño, dureza y opacidad ajustables pintás sobre el píxel quemado en un solo cuadro de muestra.</p>
         </div>
-        <div class="step">
+        <div class="step glass">
           <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.55-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.55-1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34H9a1.7 1.7 0 001-1.55V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.55 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87V9a1.7 1.7 0 001.55 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.55 1z"/></svg></div>
           <div class="n">03 · Motor y calidad</div>
           <h3>Elegís motor y velocidad</h3>
           <p>Desenfoque gaussiano para previsualizar rápido, o inpainting de OpenCV para máxima calidad. Vista previa antes/después en vivo.</p>
         </div>
-        <div class="step">
+        <div class="step glass">
           <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
           <div class="n">04 · Procesar</div>
           <h3>Repara todo el lote</h3>
@@ -372,7 +472,7 @@
         <p>Los dos motores conviven en la misma app — probás uno, cambiás al otro, y la vista previa se actualiza al instante.</p>
       </div>
       <div class="engines reveal">
-        <div class="engine">
+        <div class="engine glass">
           <span class="tag">motor · blur</span>
           <h3>Desenfoque gaussiano</h3>
           <p>Mezcla el área marcada con una versión suavizada del mismo cuadro. Es el motor más rápido: ideal para revisar el lote entero antes de una pasada final.</p>
@@ -381,7 +481,7 @@
           <div class="bar-row" style="margin-top:12px"><span>Precisión de textura</span></div>
           <div class="bar"><i style="width:45%"></i></div>
         </div>
-        <div class="engine">
+        <div class="engine glass">
           <span class="tag">motor · opencv inpaint</span>
           <h3>Reconstrucción por inpainting</h3>
           <p>Reconstruye la zona dañada a partir de la textura de los píxeles vecinos (algoritmo Telea). Más lento, pero indistinguible en fondos con detalle.</p>
@@ -401,7 +501,7 @@
         <h2>El mismo cuadro, antes y después.</h2>
         <p>Así se ve la vista previa en vivo dentro de la app mientras ajustás pincel y motor — arrastrá la manija para comparar.</p>
       </div>
-      <div class="compare-shell reveal">
+      <div class="compare-shell glass reveal">
         <div class="compare" id="compareBox">
           <canvas id="beforeCanvas" width="1280" height="672"></canvas>
           <div class="after-mask" id="afterMask">
@@ -427,52 +527,52 @@
         <p>Todo lo que necesitás para dejar el clip listo para exportar, sin salir de la app.</p>
       </div>
       <div class="features reveal">
-        <div class="feature">
+        <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></div>
           <h3>Pincel con tamaño, dureza y opacidad</h3>
           <p>Igual que en un editor de fotos: ajustá cada parámetro con campos numéricos arrastrables o atajos de teclado.</p>
         </div>
-        <div class="feature">
+        <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
           <h3>Vista previa antes/después en vivo</h3>
           <p>Vas viendo el resultado del motor elegido mientras pintás, antes de procesar un solo cuadro real.</p>
         </div>
-        <div class="feature">
+        <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15V6a2 2 0 00-2-2H5a2 2 0 00-2 2v9m18 0H3m18 0l-2.5 5h-13L3 15"/></svg></div>
           <h3>Arrastrar y soltar clips</h3>
           <p>Soltá los archivos directo sobre la ventana. También podés elegirlos desde el explorador de siempre.</p>
         </div>
-        <div class="feature">
+        <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="15" height="12" rx="2"/><path d="M18 10l4-2v8l-4-2"/></svg></div>
           <h3>Lee la metadata de tu cámara</h3>
           <p>ISO, lente, timecode, perfil y espacio de color: los datos quedan a la vista mientras trabajás.</p>
         </div>
-        <div class="feature">
+        <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div>
           <h3>Cancelar cuando quieras</h3>
           <p>Parás el procesamiento en cualquier punto del lote; los archivos parciales se limpian solos.</p>
         </div>
-        <div class="feature">
+        <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg></div>
           <h3>Modo claro y oscuro</h3>
           <p>La interfaz arranca en oscuro por defecto y cambia al instante, para editar sin cansar la vista.</p>
         </div>
-        <div class="feature">
+        <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></div>
           <h3>Procesa por lotes</h3>
           <p>Una sola máscara se aplica a todos los clips que tengan el mismo defecto de sensor, uno detrás del otro.</p>
         </div>
-        <div class="feature">
+        <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0z"/><path d="M12 7v5l3 3"/></svg></div>
           <h3>Corre sobre ffmpeg</h3>
           <p>Motor de video estándar de la industria, embebido en el instalador — no hace falta instalar nada aparte.</p>
         </div>
-        <div class="feature">
+        <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg></div>
           <h3>100% local</h3>
           <p>Tus clips nunca salen de tu computadora: no hay subida, ni cuenta, ni servidor de por medio.</p>
         </div>
-        <div class="feature">
+        <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
           <h3>Deshacer y rehacer</h3>
           <p>Historial completo de pinceladas mientras armás la máscara, con zoom y mano para moverte por el cuadro.</p>
@@ -487,7 +587,7 @@
         <span class="eyebrow">Antes de instalar</span>
         <h2>Preguntas frecuentes</h2>
       </div>
-      <div class="faq reveal">
+      <div class="faq glass reveal">
         <details class="faq-item" open>
           <summary>¿Necesito saber programar o instalar Python?</summary>
           <p>No. El instalador de Windows trae todo embebido, ffmpeg incluido. Se instala como cualquier programa y se abre desde el menú inicio.</p>
@@ -498,7 +598,7 @@
         </details>
         <details class="faq-item">
           <summary>¿Funciona con cámaras que no sean la Sony A7III?</summary>
-          <p>Sí. Se probó primero sobre A7III porque fue donde apareció el defecto original, pero el detector de píxel verde y ambos motores de reparación funcionan con cualquier clip donde puedas fotografiar el punto dañado.</p>
+          <p>Sí. Se probó primero sobre A7III porque fue donde apareció el defecto original, pero el pincel de máscara y ambos motores de reparación funcionan con cualquier clip donde puedas fotografiar el punto dañado, sin importar de qué color sea el píxel.</p>
         </details>
         <details class="faq-item">
           <summary>¿Qué pasa si cancelo a mitad de un lote?</summary>
@@ -514,11 +614,11 @@
 
   <section class="section" id="descarga">
     <div class="wrap">
-      <div class="cta-band reveal">
+      <div class="cta-band glass reveal">
         <h2>Un píxel quemado no debería arruinar la toma.</h2>
         <div class="ctas">
-          <a class="btn btn-primary" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0/PixelClean_Setup.exe" download>Descargar instalador (.exe)</a>
-          <a class="btn btn-ghost" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0-portable/PixelClean_Portable.rar" download>Versión portable (.rar)</a>
+          <a class="btn btn-primary js-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0/PixelClean_Setup.exe" download>Descargar instalador (.exe)</a>
+          <a class="btn btn-ghost js-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0-portable/PixelClean_Portable.rar" download>Versión portable (.rar)</a>
         </div>
       </div>
     </div>
@@ -543,6 +643,19 @@
   </div>
 </footer>
 
+<div class="donate-overlay" id="donateOverlay">
+  <div class="donate-modal glass">
+    <button class="close" id="donateClose" aria-label="Cerrar">✕</button>
+    <div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>
+    <h3>Tu descarga ya arrancó</h3>
+    <p>PixelClean es gratis y va a seguir siéndolo. Si te sacó un dolor de cabeza, podés invitarme un cafecito — no es obligatorio, pero ayuda a seguir manteniendo el proyecto.</p>
+    <div class="row">
+      <a class="btn btn-primary" href="https://cafecito.app/pixelclean" target="_blank" rel="noopener">☕ Invitame un cafecito</a>
+      <button class="skip" id="donateSkip">Ahora no, gracias</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -558,102 +671,6 @@
     els.forEach(function (el) { io.observe(el); });
   } else {
     els.forEach(function (el) { el.classList.add("is-visible"); });
-  }
-
-  /* ---- hero HUD: sensor grid healing loop ---- */
-  var hc = document.getElementById("heroCanvas");
-  var hx = hc.getContext("2d");
-  var cols = 14, rows = 9;
-  var stuckCell = { c: 9, r: 3 };
-
-  function seeded(i, j) {
-    var x = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453;
-    return x - Math.floor(x);
-  }
-
-  function drawHero(t) {
-    var W = hc.width, H = hc.height;
-    hx.clearRect(0, 0, W, H);
-    var pad = 30;
-    var cw = (W - pad * 2) / cols, ch = (H - pad * 2) / rows;
-    var cycle = 3600;
-    var phase = REDUCED ? cycle * 0.7 : (t % cycle) / cycle;
-    var bandX = pad + phase * (W - pad * 2);
-    var bandW = 130;
-
-    var style = getComputedStyle(document.documentElement);
-    var lineColor = style.getPropertyValue("--line").trim() || "#242933";
-    var panel2 = style.getPropertyValue("--panel-2").trim() || "#171b23";
-    var stuckColor = style.getPropertyValue("--stuck").trim() || "#59ff8f";
-    var signal = style.getPropertyValue("--signal").trim() || "#4c86ff";
-
-    for (var r = 0; r < rows; r++) {
-      for (var c = 0; c < cols; c++) {
-        var x = pad + c * cw, y = pad + r * ch;
-        var noise = seeded(c, r);
-        var isStuck = c === stuckCell.c && r === stuckCell.r;
-        var cellCenterX = x + cw / 2;
-        var healed = isStuck && (cellCenterX < bandX - bandW / 2 || phase > 0.97);
-        var inBand = isStuck && Math.abs(cellCenterX - bandX) < bandW / 2;
-
-        hx.fillStyle = panel2;
-        hx.globalAlpha = 0.35 + noise * 0.25;
-        hx.fillRect(x + 1.5, y + 1.5, cw - 3, ch - 3);
-        hx.globalAlpha = 1;
-
-        if (isStuck) {
-          if (inBand) {
-            var local = (cellCenterX - (bandX - bandW / 2)) / bandW;
-            hx.fillStyle = local < 0.5 ? stuckColor : signal;
-            hx.globalAlpha = local < 0.5 ? 1 : 0.85;
-          } else if (healed) {
-            hx.fillStyle = signal;
-            hx.globalAlpha = 0.85;
-          } else {
-            hx.fillStyle = stuckColor;
-            hx.globalAlpha = 1;
-          }
-          hx.save();
-          hx.shadowColor = hx.fillStyle;
-          hx.shadowBlur = 22;
-          hx.fillRect(x + 3, y + 3, cw - 6, ch - 6);
-          hx.restore();
-          hx.globalAlpha = 1;
-        }
-      }
-    }
-
-    /* scan band */
-    if (!REDUCED) {
-      var grad = hx.createLinearGradient(bandX - bandW / 2, 0, bandX + bandW / 2, 0);
-      grad.addColorStop(0, "rgba(76,134,255,0)");
-      grad.addColorStop(0.5, "rgba(76,134,255,0.16)");
-      grad.addColorStop(1, "rgba(76,134,255,0)");
-      hx.fillStyle = grad;
-      hx.fillRect(bandX - bandW / 2, 0, bandW, H);
-    }
-
-    /* grid lines */
-    hx.strokeStyle = lineColor;
-    hx.globalAlpha = 0.6;
-    hx.lineWidth = 1;
-    hx.beginPath();
-    for (var i = 0; i <= cols; i++) {
-      var gx = pad + i * cw;
-      hx.moveTo(gx, pad); hx.lineTo(gx, H - pad);
-    }
-    for (var j = 0; j <= rows; j++) {
-      var gy = pad + j * ch;
-      hx.moveTo(pad, gy); hx.lineTo(W - pad, gy);
-    }
-    hx.stroke();
-    hx.globalAlpha = 1;
-  }
-
-  if (REDUCED) {
-    drawHero(0);
-  } else {
-    requestAnimationFrame(function loop(t) { drawHero(t); requestAnimationFrame(loop); });
   }
 
   /* ---- before / after compare ---- */
@@ -723,5 +740,23 @@
   box.addEventListener("pointerdown", function (e) { dragging = true; setSplit(fromEvent(e)); });
   window.addEventListener("pointermove", function (e) { if (dragging) setSplit(fromEvent(e)); });
   window.addEventListener("pointerup", function () { dragging = false; });
+
+  /* ---- donate popup on download ---- */
+  var overlay = document.getElementById("donateOverlay");
+  var closeBtn = document.getElementById("donateClose");
+  var skipBtn = document.getElementById("donateSkip");
+
+  function openDonate() { overlay.classList.add("open"); }
+  function closeDonate() { overlay.classList.remove("open"); }
+
+  document.querySelectorAll(".js-download").forEach(function (a) {
+    a.addEventListener("click", function () {
+      setTimeout(openDonate, 250);
+    });
+  });
+  closeBtn.addEventListener("click", closeDonate);
+  skipBtn.addEventListener("click", closeDonate);
+  overlay.addEventListener("click", function (e) { if (e.target === overlay) closeDonate(); });
+  window.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDonate(); });
 })();
 </script>
