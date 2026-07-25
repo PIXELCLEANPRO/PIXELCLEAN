@@ -61,7 +61,7 @@ RESOLUCIONES = {
 LICENCIA_HASH_PRO = "ab45d00dee70232649d49b004f952ecb6c0ae0a00663c15f5d7b4c2a3929d071"
 LIMITE_GRATIS_DIARIO = 5
 
-VERSION_APP = "1.0.0"
+VERSION_APP = "1.1.0"
 URL_ULTIMA_VERSION = "https://api.github.com/repos/PIXELCLEANPRO/PIXELCLEAN/releases/latest"
 URL_PAGINA_DESCARGA = "https://pixelclean-app.netlify.app"
 

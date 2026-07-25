@@ -2,6 +2,11 @@ name: Build macOS
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Tag del release al que subir el .dmg"
+        required: true
+        default: "v1.1"
 
 permissions:
   contents: write
@@ -58,7 +63,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload v1.0 PixelClean_Mac.dmg --repo ${{ github.repository }} --clobber
+          gh release upload "${{ inputs.release_tag }}" PixelClean_Mac.dmg --repo ${{ github.repository }} --clobber
 
       - name: Subir tambien como artifact del workflow
         uses: actions/upload-artifact@v4

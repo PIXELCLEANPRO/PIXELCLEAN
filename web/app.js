@@ -200,6 +200,24 @@ async function activarLicenciaDesdeModal() {
 document.getElementById("licenciaActivar").addEventListener("click", activarLicenciaDesdeModal);
 licenciaInput.addEventListener("keydown", (e) => { if (e.key === "Enter") activarLicenciaDesdeModal(); });
 
+/* ---------------- Upsell a Pro al terminar de exportar ---------------- */
+async function mostrarUpsellSiCorresponde() {
+  try {
+    const estado = await api.estado_licencia();
+    if (estado && !estado.pro) {
+      document.getElementById("upsellOverlay").classList.add("open");
+    }
+  } catch (err) {
+    // si no se puede consultar el plan, no mostramos nada
+  }
+}
+document.getElementById("upsellCerrar").addEventListener("click", () => {
+  document.getElementById("upsellOverlay").classList.remove("open");
+});
+document.getElementById("upsellOverlay").addEventListener("click", (e) => {
+  if (e.target.id === "upsellOverlay") document.getElementById("upsellOverlay").classList.remove("open");
+});
+
 refrescarPlanBadge();
 
 /* ---------------- Topbar: pasos + tema ---------------- */
@@ -917,6 +935,7 @@ async function procesarTodo() {
       btnCancelar.style.display = "none";
       document.querySelector(".ring-wrap").classList.remove("procesando");
       refrescarPlanBadge();
+      mostrarUpsellSiCorresponde();
     }
   }, 500);
 }
