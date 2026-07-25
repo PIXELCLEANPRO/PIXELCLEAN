@@ -86,6 +86,7 @@
           <button class="tool-btn" id="btnRotate"><svg width="17" height="17"><use href="#i-rotate"/></svg><span class="tip">Rotar 90</span></button>
           <div class="tool-sep"></div>
           <button class="tool-btn" id="btnLoadPng"><svg width="17" height="17"><use href="#i-upload"/></svg><span class="tip">Cargar PNG</span></button>
+          <button class="tool-btn" id="btnDetectarAuto"><svg width="17" height="17"><use href="#i-spark"/></svg><span class="tip">Detectar automatico (prueba)</span></button>
           <div class="tool-sep"></div>
           <button class="tool-btn" id="btnZoomIn"><svg width="16" height="16"><use href="#i-zoomin"/></svg><span class="tip">Acercar</span></button>
           <button class="tool-btn" id="btnZoomOut"><svg width="16" height="16"><use href="#i-zoomout"/></svg><span class="tip">Alejar</span></button>
@@ -105,6 +106,16 @@
               <span class="sf-label">Angulo</span><span class="sf-value">0</span><span class="sf-unit">°</span>
             </div>
             <div class="options-bar-hint">Alt + click derecho: arrastrar para tamano/dureza</div>
+          </div>
+          <div class="options-bar" id="barPerfiles" style="gap:8px">
+            <span class="sf-label" style="align-self:center">Perfil de camara (prueba)</span>
+            <select id="selectPerfiles" style="max-width:220px">
+              <option value="">Sin perfil</option>
+            </select>
+            <button class="btn btn-ghost" id="btnCargarPerfil" style="padding:6px 10px">Cargar</button>
+            <button class="btn btn-ghost" id="btnGuardarPerfil" style="padding:6px 10px">Guardar como...</button>
+            <button class="btn btn-ghost" id="btnBorrarPerfil" style="padding:6px 10px">Borrar</button>
+            <span class="options-bar-hint" id="perfilesMsg"></span>
           </div>
           <div class="canvas-viewport" id="viewportMascara">
             <div class="canvas-stage" id="stageMascara">
@@ -170,6 +181,8 @@
         </div>
         <div class="nav-info" id="lblProcesoInfo">0 / 0 clips</div>
         <button class="btn btn-ghost" id="btnCancelar" style="display:none">Cancelar</button>
+        <img id="previewRenderImg" alt="Vista previa del render (baja calidad, orientativa)"
+             style="display:none;max-width:220px;border-radius:10px;margin-top:14px;opacity:0.9">
       </div>
       <div class="card log-col">
         <div class="log-box" id="logBox"></div>

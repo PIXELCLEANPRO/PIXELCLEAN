@@ -11,7 +11,7 @@ AppId={{8F2C9E1A-4B6D-4E1F-9C3A-2D7B5F0A61C4}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={autopf}\{#MyAppName}
+DefaultDirName={localappdata}\Programs\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=installer_output
@@ -21,7 +21,11 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\{#MyAppExeName}
-PrivilegesRequired=admin
+; Sin admin: se instala solo para el usuario actual, en su carpeta de perfil.
+; Esto es lo que permite que la auto-actualizacion sea 100% silenciosa --
+; con PrivilegesRequired=admin, Windows siempre muestra el dialogo de UAC
+; (incluso con /VERYSILENT) y eso es lo que trababa la actualizacion automatica.
+PrivilegesRequired=lowest
 CloseApplications=force
 RestartApplications=no
 

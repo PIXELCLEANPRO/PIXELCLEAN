@@ -69,6 +69,19 @@ const mockApi = {
   activar_licencia: async () => ({ok: false, error: "Modo de prueba en navegador: no se puede validar una clave real aca."}),
   obtener_estado_actualizacion: async () => ({hay_actualizacion: false}),
   instalar_actualizacion: async () => ({ok: false, error: "Modo de prueba en navegador: la auto-instalacion solo funciona en la app real."}),
+  detectar_mascara_auto: async () => ({ok: true, mascara_b64: mockFrameDataUrl, mensaje: "Modo de prueba en navegador: mascara simulada (no es deteccion real)."}),
+  _perfilesMock: {},
+  listar_perfiles_camara: async () => Object.keys(mockApi._perfilesMock),
+  guardar_perfil_camara: async (nombre, mascaraB64, motor, sigma) => {
+    if (!nombre || !nombre.trim()) return {ok: false, error: "Poné un nombre para el perfil."};
+    mockApi._perfilesMock[nombre] = {mascara_b64: mascaraB64, motor, sigma};
+    return {ok: true};
+  },
+  cargar_perfil_camara: async (nombre) => {
+    const p = mockApi._perfilesMock[nombre];
+    return p ? {ok: true, ...p} : {ok: false, error: "No existe ese perfil."};
+  },
+  borrar_perfil_camara: async (nombre) => { delete mockApi._perfilesMock[nombre]; return {ok: true}; },
 };
 
 // nota: el flujo real consulta el progreso por fetch('/progreso') servido por el mismo
@@ -653,6 +666,87 @@ document.getElementById("btnLoadPng").addEventListener("click", async () => {
   img.src = resultado;
 });
 
+/* ---------------- Batch inteligente: deteccion automatica (de prueba) ---------------- */
+document.getElementById("btnDetectarAuto").addEventListener("click", async () => {
+  if (!state.clips.length || !api.detectar_mascara_auto) return;
+  const btn = document.getElementById("btnDetectarAuto");
+  btn.disabled = true;
+  try {
+    const resultado = await api.detectar_mascara_auto(state.clips[0]);
+    if (!resultado.ok) {
+      alert(resultado.error || "No se pudo detectar el punto quemado automaticamente.");
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      ctxMask.clearRect(0, 0, cnvMask.width, cnvMask.height);
+      ctxMask.drawImage(img, 0, 0, cnvMask.width, cnvMask.height);
+      cnvMask.style.opacity = "0.55";
+      pushHistory();
+      actualizarPreview("mascara");
+    };
+    img.src = resultado.mascara_b64;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------------- Perfiles guardados por camara (de prueba, el usuario les pone nombre) ---------------- */
+async function refrescarPerfiles() {
+  if (!api.listar_perfiles_camara) return;
+  const nombres = await api.listar_perfiles_camara().catch(() => []);
+  const sel = document.getElementById("selectPerfiles");
+  const actual = sel.value;
+  sel.innerHTML = '<option value="">Sin perfil</option>' + nombres.map(n => `<option value="${n}">${n}</option>`).join("");
+  if (nombres.includes(actual)) sel.value = actual;
+}
+refrescarPerfiles();
+
+document.getElementById("btnGuardarPerfil").addEventListener("click", async () => {
+  if (!hayMascara()) { document.getElementById("perfilesMsg").textContent = "Primero marca una mascara."; return; }
+  const nombre = prompt("Nombre para este perfil (ej: Sony A7III - mi punto quemado):", "");
+  if (!nombre) return;
+  const resultado = await api.guardar_perfil_camara(nombre.trim(), cnvMask.toDataURL(), state.motor, state.sigma);
+  const msg = document.getElementById("perfilesMsg");
+  if (resultado.ok) {
+    msg.textContent = `Guardado: "${nombre.trim()}"`;
+    await refrescarPerfiles();
+    document.getElementById("selectPerfiles").value = nombre.trim();
+  } else {
+    msg.textContent = resultado.error || "No se pudo guardar.";
+  }
+});
+
+document.getElementById("btnCargarPerfil").addEventListener("click", async () => {
+  const nombre = document.getElementById("selectPerfiles").value;
+  const msg = document.getElementById("perfilesMsg");
+  if (!nombre) { msg.textContent = "Elegi un perfil de la lista."; return; }
+  const resultado = await api.cargar_perfil_camara(nombre);
+  if (!resultado.ok) { msg.textContent = resultado.error || "No se pudo cargar."; return; }
+  const img = new Image();
+  img.onload = () => {
+    ctxMask.clearRect(0, 0, cnvMask.width, cnvMask.height);
+    ctxMask.drawImage(img, 0, 0, cnvMask.width, cnvMask.height);
+    cnvMask.style.opacity = "0.55";
+    pushHistory();
+    actualizarPreview("mascara");
+  };
+  img.src = resultado.mascara_b64;
+  if (typeof resultado.motor === "string") state.motor = resultado.motor;
+  if (typeof resultado.sigma === "number") state.sigma = resultado.sigma;
+  msg.textContent = `Perfil "${nombre}" aplicado.`;
+});
+
+document.getElementById("btnBorrarPerfil").addEventListener("click", async () => {
+  const nombre = document.getElementById("selectPerfiles").value;
+  const msg = document.getElementById("perfilesMsg");
+  if (!nombre) { msg.textContent = "Elegi un perfil de la lista."; return; }
+  if (!confirm(`Borrar el perfil "${nombre}"?`)) return;
+  await api.borrar_perfil_camara(nombre);
+  msg.textContent = `Perfil "${nombre}" borrado.`;
+  await refrescarPerfiles();
+});
+
 window.addEventListener("resize", () => { if (state.step === 1) fitCanvasToViewport(); });
 
 /* ---------------- Paneles redimensionables ---------------- */
@@ -889,6 +983,8 @@ async function procesarTodo() {
   setAnillo(0);
   document.querySelector(".ring-wrap").classList.add("procesando");
   document.querySelectorAll("#clipList .clip-row .bar > div").forEach((b) => { b.style.width = "0%"; });
+  const imgPreviewRender = document.getElementById("previewRenderImg");
+  imgPreviewRender.style.display = "none";
 
   const payload = {
     mascara_b64: cnvMask.toDataURL(),
@@ -906,6 +1002,7 @@ async function procesarTodo() {
 
   let intentosSinRespuesta = 0;
   let vimosArranque = false;
+  let tick = 0;
   clearInterval(_pollTimer);
   _pollTimer = setInterval(async () => {
     let p;
@@ -929,11 +1026,26 @@ async function procesarTodo() {
     (p.logs || []).slice(_logsMostrados).forEach((l) => logLinea(l.mensaje, l.ok ? "ok" : "err"));
     _logsMostrados = (p.logs || []).length;
     document.querySelector(".ring-wrap").classList.toggle("procesando", !p.terminado);
+
+    // Vista previa en vivo (de prueba): baja frecuencia, solo orientativa.
+    tick++;
+    if (!p.terminado && tick % 4 === 0) {
+      try {
+        const respPrev = await fetch(`/preview_render?_=${Date.now()}`);
+        const prev = await respPrev.json();
+        if (prev.preview_b64) {
+          imgPreviewRender.src = prev.preview_b64;
+          imgPreviewRender.style.display = "block";
+        }
+      } catch (err) { /* la preview es cosmetica, se ignora si falla */ }
+    }
+
     if (p.terminado && vimosArranque) {
       clearInterval(_pollTimer);
       btn.disabled = false;
       btnCancelar.style.display = "none";
       document.querySelector(".ring-wrap").classList.remove("procesando");
+      imgPreviewRender.style.display = "none";
       refrescarPlanBadge();
       mostrarUpsellSiCorresponde();
     }

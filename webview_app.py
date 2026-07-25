@@ -12,6 +12,7 @@ import logging
 import os
 import sys
 import threading
+import time
 import traceback
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -19,6 +20,7 @@ import numpy as np
 import webview
 from PIL import Image, ImageFilter
 
+import deteccion_automatica
 import metadata_camara
 import motores_reparacion as motores
 
@@ -125,6 +127,9 @@ class Api:
         self._evento_cancelar = threading.Event()
         self._actualizacion_lock = threading.Lock()
         self._actualizacion = {"hay_actualizacion": False}
+        self._preview_lock = threading.Lock()
+        self._preview_render_b64 = None
+        self._preview_render_ultima = 0.0
 
     def set_ventana(self, ventana):
         self._ventana = ventana
@@ -221,7 +226,9 @@ class Api:
         """Descarga el instalador nuevo y lo lanza en modo silencioso; el
         instalador reemplaza esta misma instalacion (mismo AppId => actualizacion
         in-place) y vuelve a abrir la app solo. La licencia no se pierde porque
-        vive en %LOCALAPPDATA%\\PixelClean, fuera de la carpeta de instalacion."""
+        vive en %LOCALAPPDATA%\\PixelClean, fuera de la carpeta de instalacion.
+        Devuelve {"ok": bool, "error": str|None} -- el llamador debe propagarlo,
+        nunca asumir que salio bien."""
         try:
             with self._actualizacion_lock:
                 self._actualizacion["instalando"] = True
@@ -238,10 +245,12 @@ class Api:
                 creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
             )
             threading.Thread(target=self._cerrar_para_actualizar, daemon=True).start()
+            return {"ok": True}
         except Exception as e:
             with self._actualizacion_lock:
                 self._actualizacion["instalando"] = False
                 self._actualizacion["error"] = str(e)
+            return {"ok": False, "error": str(e)}
 
     def instalar_actualizacion(self):
         """Disparador manual (botón de la campanita): normalmente la
@@ -252,9 +261,9 @@ class Api:
             ya_instalando = self._actualizacion.get("instalando")
         if not descarga_url:
             return {"ok": False, "error": "No hay una URL de descarga disponible todavia."}
-        if not ya_instalando:
-            self._descargar_e_instalar(descarga_url)
-        return {"ok": True}
+        if ya_instalando:
+            return {"ok": True}
+        return self._descargar_e_instalar(descarga_url)
 
     def _cerrar_para_actualizar(self):
         import time
@@ -321,6 +330,65 @@ class Api:
         except Exception:
             return None
 
+    # ---------- batch inteligente: deteccion automatica ----------
+    def detectar_mascara_auto(self, ruta_clip):
+        try:
+            info = motores._info_basica(FFPROBE_BIN, ruta_clip)
+            ok, rgba, mensaje = deteccion_automatica.detectar_mascara_automatica(
+                FFMPEG_BIN, ruta_clip, info.get("duracion_seg"))
+            if not ok:
+                return {"ok": False, "error": mensaje}
+            tamano = self._frame_actual.size if self._frame_actual is not None else (rgba.shape[1], rgba.shape[0])
+            salida = Image.fromarray(rgba, mode="RGBA").resize(tamano)
+            return {"ok": True, "mascara_b64": _pil_a_b64(salida), "mensaje": mensaje}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    # ---------- perfiles guardados por camara (el usuario les pone nombre a mano) ----------
+    def _leer_perfiles_camara(self):
+        try:
+            with open(_ruta_datos_usuario("perfiles_camara.json"), "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+    def _guardar_perfiles_camara(self, perfiles):
+        with open(_ruta_datos_usuario("perfiles_camara.json"), "w", encoding="utf-8") as f:
+            json.dump(perfiles, f)
+
+    def listar_perfiles_camara(self):
+        return sorted(self._leer_perfiles_camara().keys())
+
+    def guardar_perfil_camara(self, nombre, mascara_b64, motor, sigma):
+        nombre = (nombre or "").strip()
+        if not nombre:
+            return {"ok": False, "error": "Poné un nombre para el perfil."}
+        try:
+            perfiles = self._leer_perfiles_camara()
+            perfiles[nombre] = {
+                "mascara_b64": mascara_b64, "motor": motor, "sigma": sigma,
+                "creado": datetime.date.today().isoformat(),
+            }
+            self._guardar_perfiles_camara(perfiles)
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    def cargar_perfil_camara(self, nombre):
+        perfil = self._leer_perfiles_camara().get(nombre)
+        if not perfil:
+            return {"ok": False, "error": "No existe ese perfil."}
+        return {"ok": True, **perfil}
+
+    def borrar_perfil_camara(self, nombre):
+        try:
+            perfiles = self._leer_perfiles_camara()
+            perfiles.pop(nombre, None)
+            self._guardar_perfiles_camara(perfiles)
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     # ---------- vista previa en vivo ----------
     def render_preview(self, motor_id, mascara_b64, sigma):
         if self._frame_actual is None:
@@ -380,6 +448,52 @@ class Api:
         with self._progreso_lock:
             self.progreso["logs"].append({"mensaje": mensaje, "ok": ok})
 
+    # ---------- vista previa en vivo durante el render (de prueba) ----------
+    # Muestreo periodico y en baja resolucion, solo para ver "por donde viene"
+    # el lote -- no es el cuadro exacto que esta escribiendo ffmpeg (eso requeriria
+    # leer el archivo de salida a medio escribir, fragil), sino el mismo calculo
+    # de reparar_crop_preview aplicado al cuadro de origen mas cercano al avance
+    # actual. Nunca debe interrumpir el procesamiento real si algo falla.
+    def _actualizar_preview_render(self, ruta_clip, frac, motor_id, mascara_rgba_arr, sigma):
+        ahora = time.time()
+        with self._preview_lock:
+            if ahora - self._preview_render_ultima < 2.0:
+                return
+            self._preview_render_ultima = ahora
+        try:
+            import subprocess
+            import tempfile
+            info = motores._info_basica(FFPROBE_BIN, ruta_clip)
+            duracion = info.get("duracion_seg") or 1.0
+            segundo = max(min(frac, 0.98), 0.0) * duracion
+            ruta_tmp = os.path.join(tempfile.gettempdir(), f"_pixelclean_preview_{os.getpid()}.png")
+            subprocess.run([FFMPEG_BIN, "-y", "-hide_banner", "-loglevel", "error",
+                             "-ss", str(segundo), "-i", ruta_clip, "-frames:v", "1", ruta_tmp],
+                            capture_output=True, timeout=15,
+                            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+            if not os.path.isfile(ruta_tmp):
+                return
+            frame = np.asarray(Image.open(ruta_tmp).convert("RGB"))
+            os.remove(ruta_tmp)
+            mascara_rs = np.asarray(Image.fromarray(mascara_rgba_arr, mode="RGBA")
+                                     .resize((frame.shape[1], frame.shape[0])))
+            mascara_alpha = mascara_rs[..., 3]
+            ys, xs = np.where(mascara_alpha > 20)
+            if len(xs) == 0:
+                return
+            pad = 80
+            x0, x1 = max(int(xs.min()) - pad, 0), min(int(xs.max()) + pad, frame.shape[1])
+            y0, y1 = max(int(ys.min()) - pad, 0), min(int(ys.max()) + pad, frame.shape[0])
+            crop = frame[y0:y1, x0:x1]
+            mascara_crop = mascara_alpha[y0:y1, x0:x1]
+            reparado = reparar_crop_preview(motor_id, crop, mascara_crop, sigma)
+            img_out = Image.fromarray(reparado)
+            img_out.thumbnail((320, 320))  # baja resolucion a proposito: solo orientativa
+            with self._preview_lock:
+                self._preview_render_b64 = _pil_a_b64(img_out)
+        except Exception:
+            pass
+
     def _procesar_todo_worker(self, payload):
         clips = payload["clips"]
         try:
@@ -409,9 +523,12 @@ class Api:
                 ext = os.path.splitext(clip)[1] or ".mp4"
                 ruta_salida = os.path.join(carpeta_salida, nombre + OUTPUT_SUFFIX + ext)
 
-                def callback(frac, i=idx):
+                mascara_rgba_arr = np.asarray(mascara_rgba)
+
+                def callback(frac, i=idx, clip=clip):
                     with self._progreso_lock:
                         self.progreso["por_clip"][i] = frac
+                    self._actualizar_preview_render(clip, frac, payload["motor"], mascara_rgba_arr, payload["sigma"])
 
                 exito, resultado = motor_fn(FFMPEG_BIN, FFPROBE_BIN, clip, mascara_bn_path, ruta_salida,
                                              parametros, callback)
@@ -467,6 +584,9 @@ def _iniciar_servidor(api):
             if ruta == "/progreso":
                 with api._progreso_lock:
                     self._responder_json(api.progreso)
+            elif ruta == "/preview_render":
+                with api._preview_lock:
+                    self._responder_json({"preview_b64": api._preview_render_b64})
             else:
                 super().do_GET()
 
