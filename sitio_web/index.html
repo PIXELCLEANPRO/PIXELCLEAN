@@ -2,6 +2,9 @@
 <meta name="description" content="PixelClean detecta y repara píxeles quemados o muertos del sensor en tus videos, cuadro a cuadro, 100% en tu computadora." />
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5750366535948261"
      crossorigin="anonymous"></script>
+<script
+  src="https://www.paypal.com/sdk/js?client-id=BAAMVIRZEQcDj5agIU_iIHZGaGHxizZwT3SgZsWd1WIMLpKNx1ODKr9zLeAkFWiMbiePigpedTyZ0Qg4rA&components=hosted-buttons&disable-funding=venmo&currency=USD">
+</script>
 
 <style>
   /* ---------- tokens ---------- */
@@ -221,6 +224,7 @@
   .price-list li { font-size: 14px; color: var(--ink-soft); padding-left: 22px; position: relative; }
   .price-list li::before { content: "✓"; position: absolute; left: 0; color: var(--stuck); font-weight: 700; }
   .price-card .btn { width: 100%; justify-content: center; }
+  .paypal-btn-wrap { width: 100%; }
 
   /* ---------- reveal ---------- */
   .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
@@ -315,47 +319,6 @@
   .foot-links a:hover { color: var(--ink); }
   .foot-note { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); }
 
-  /* ---------- donate modal ---------- */
-  .donate-overlay {
-    position: fixed; inset: 0; z-index: 100;
-    background: rgba(10, 10, 16, .45);
-    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-    display: flex; align-items: center; justify-content: center;
-    padding: 24px;
-    opacity: 0; pointer-events: none;
-    transition: opacity .22s ease;
-  }
-  .donate-overlay.open { opacity: 1; pointer-events: auto; }
-  .donate-modal {
-    width: 100%; max-width: 380px;
-    border-radius: var(--r-lg);
-    padding: 32px 28px 26px;
-    text-align: center;
-    position: relative;
-    transform: translateY(10px) scale(.97);
-    transition: transform .22s ease;
-  }
-  .donate-overlay.open .donate-modal { transform: translateY(0) scale(1); }
-  .donate-modal .close {
-    position: absolute; top: 14px; right: 14px;
-    width: 30px; height: 30px; border-radius: 50%;
-    background: var(--panel-2); border: 1px solid var(--glass-border);
-    color: var(--ink-soft); cursor: pointer;
-    display: flex; align-items: center; justify-content: center; font-size: 16px;
-  }
-  .donate-modal .close:hover { color: var(--ink); }
-  .donate-modal .ico {
-    width: 54px; height: 54px; border-radius: 16px; margin: 0 auto 16px;
-    background: linear-gradient(135deg, var(--signal), var(--accent-2));
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 10px 24px -8px color-mix(in srgb, var(--signal) 60%, transparent);
-  }
-  .donate-modal h3 { font-size: 21px; margin-bottom: 10px; }
-  .donate-modal p { color: var(--ink-soft); font-size: 14.5px; line-height: 1.5; margin-bottom: 22px; }
-  .donate-modal .row { display: flex; flex-direction: column; gap: 10px; }
-  .donate-modal .btn { justify-content: center; width: 100%; }
-  .donate-modal .skip { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); background: none; border: none; cursor: pointer; padding: 6px; }
-  .donate-modal .skip:hover { color: var(--ink-soft); }
 </style>
 
 <header class="nav">
@@ -422,7 +385,12 @@
             <li>Sin límite diario de clips</li>
             <li>Procesamiento por lotes sin restricción</li>
           </ul>
-          <a class="btn btn-primary" href="#precios">Comprar Pro</a>
+          <div id="paypal-container-DPBYFXST9DGP6" class="paypal-btn-wrap"></div>
+          <script>
+            if (window.paypal) {
+              paypal.HostedButtons({ hostedButtonId: "DPBYFXST9DGP6" }).render("#paypal-container-DPBYFXST9DGP6");
+            }
+          </script>
         </div>
       </div>
     </div>
@@ -642,19 +610,6 @@
     </div>
   </div>
 </footer>
-
-<div class="donate-overlay" id="donateOverlay">
-  <div class="donate-modal glass">
-    <button class="close" id="donateClose" aria-label="Cerrar">✕</button>
-    <div class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>
-    <h3>Tu descarga ya arrancó</h3>
-    <p>PixelClean es gratis y va a seguir siéndolo. Si te sacó un dolor de cabeza, podés invitarme un cafecito — no es obligatorio, pero ayuda a seguir manteniendo el proyecto.</p>
-    <div class="row">
-      <a class="btn btn-primary" href="https://cafecito.app/pixelclean" target="_blank" rel="noopener">☕ Invitame un cafecito</a>
-      <button class="skip" id="donateSkip">Ahora no, gracias</button>
-    </div>
-  </div>
-</div>
 
 <script>
 (function () {
