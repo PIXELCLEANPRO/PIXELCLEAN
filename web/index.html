@@ -38,17 +38,24 @@
     <div class="steps" id="steps"></div>
     <div class="theme-switcher">
       <button class="icon-toggle" id="btnLicencia" title="Activar licencia Pro"><svg width="15" height="15"><use href="#i-key"/></svg></button>
+      <div class="notif-wrap">
+        <button class="icon-toggle" id="btnNotif" title="Actualizaciones">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot" id="notifDot"></span>
+        </button>
+        <div class="notif-pop" id="notifPop">
+          <div class="notif-empty" id="notifEmpty">No hay actualizaciones pendientes.</div>
+          <div class="notif-update" id="notifUpdate" style="display:none">
+            <p>Version <b id="updateVersion"></b> disponible.</p>
+            <button class="btn btn-primary" id="btnActualizar">Actualizar ahora</button>
+            <p class="notif-status" id="updateStatus"></p>
+          </div>
+        </div>
+      </div>
       <svg width="15" height="15" class="theme-icon theme-icon-sun"><use href="#i-sun"/></svg>
       <button class="theme-toggle" id="themeToggle" title="Cambiar tema"></button>
       <svg width="15" height="15" class="theme-icon theme-icon-moon"><use href="#i-moon"/></svg>
     </div>
-  </div>
-
-  <div class="update-banner" id="bannerUpdate">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-9-9c2.52 0 4.85.99 6.57 2.64"/><polyline points="21 3 21 9 15 9"/></svg>
-    <span>Hay una version nueva (<b id="updateVersion"></b>) disponible.</span>
-    <a id="updateLink" href="#" target="_blank" rel="noopener">Descargar</a>
-    <button id="updateClose" aria-label="Cerrar">✕</button>
   </div>
 
   <div class="main">

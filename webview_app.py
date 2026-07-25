@@ -179,6 +179,8 @@ class Api:
             return dict(self._actualizacion)
 
     def _revisar_actualizacion_en_fondo(self):
+        if os.name != "nt":
+            return  # la auto-instalacion solo esta implementada para Windows por ahora
         import urllib.request
         try:
             req = urllib.request.Request(
@@ -189,15 +191,53 @@ class Api:
                 datos = json.loads(resp.read().decode("utf-8"))
             version_remota = datos.get("tag_name", "")
             if _version_a_tupla(version_remota) > _version_a_tupla(VERSION_APP):
+                descarga_url = None
+                for asset in datos.get("assets", []):
+                    if asset.get("name") == "PixelClean_Setup.exe":
+                        descarga_url = asset.get("browser_download_url")
+                        break
                 with self._actualizacion_lock:
                     self._actualizacion = {
                         "hay_actualizacion": True,
                         "version_actual": VERSION_APP,
                         "version_nueva": version_remota,
                         "url": datos.get("html_url") or URL_PAGINA_DESCARGA,
+                        "descarga_url": descarga_url,
                     }
         except Exception:
             pass  # sin internet o GitHub caido: no molestamos al usuario
+
+    def instalar_actualizacion(self):
+        """Descarga el instalador nuevo y lo lanza; el instalador reemplaza
+        esta misma instalacion (mismo AppId => actualizacion in-place) y
+        vuelve a abrir la app solo. La licencia no se pierde porque vive en
+        %LOCALAPPDATA%\\PixelClean, fuera de la carpeta de instalacion."""
+        with self._actualizacion_lock:
+            descarga_url = self._actualizacion.get("descarga_url")
+        if not descarga_url:
+            return {"ok": False, "error": "No hay una URL de descarga disponible todavia."}
+        try:
+            import urllib.request
+            import tempfile
+            ruta_temp = os.path.join(tempfile.gettempdir(), "PixelClean_Setup_actualizacion.exe")
+            urllib.request.urlretrieve(descarga_url, ruta_temp)
+
+            import subprocess
+            subprocess.Popen(
+                [ruta_temp, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-"],
+                close_fds=True,
+                creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+            )
+
+            threading.Thread(target=self._cerrar_para_actualizar, daemon=True).start()
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "error": f"No se pudo descargar/lanzar el instalador: {e}"}
+
+    def _cerrar_para_actualizar(self):
+        import time
+        time.sleep(1.2)  # le da tiempo al frontend a mostrar el mensaje antes de cerrar
+        os._exit(0)
 
     # ---------- paso clip ----------
     # Los dialogos nativos de Windows necesitan correr en el mismo hilo que
