@@ -249,6 +249,8 @@
   .pago-modal .eyebrow { justify-content: center; margin-bottom: 10px; }
   .pago-modal h3 { font-size: 22px; margin-bottom: 10px; }
   .pago-modal p { color: var(--ink-soft); font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+  .pago-modal .row { display: flex; flex-direction: column; gap: 10px; }
+  .pago-modal .row .btn { width: 100%; justify-content: center; }
 
   /* ---------- reveal ---------- */
   .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
@@ -359,8 +361,7 @@
       <a href="#preguntas">Preguntas</a>
     </nav>
     <div class="nav-cta">
-      <a class="btn btn-ghost js-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0-portable/PixelClean_Portable.rar" download>Portable</a>
-      <a class="btn btn-primary js-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0/PixelClean_Setup.exe" download>Descargar</a>
+      <button class="btn btn-primary js-abrir-descarga">Descargar gratis</button>
     </div>
   </div>
 </header>
@@ -373,8 +374,7 @@
         <h1>Un <em>punto quemado</em> no debería costarte la toma.</h1>
         <p class="lede">PixelClean marca el píxel quemado o muerto de tu sensor a partir de una sola foto, y repara automáticamente cada cuadro del clip con ffmpeg — sin subir un solo archivo a internet.</p>
         <div class="ctas">
-          <a class="btn btn-primary js-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0/PixelClean_Setup.exe" download>Descargar para Windows</a>
-          <a class="btn btn-ghost js-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0-portable/PixelClean_Portable.rar" download>Versión portable (.rar)</a>
+          <button class="btn btn-primary js-abrir-descarga">Descargar gratis</button>
         </div>
         <div class="fine">
           <svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg>
@@ -395,7 +395,7 @@
             <li>Máscara con pincel completo</li>
             <li>Metadata de cámara y vista previa en vivo</li>
           </ul>
-          <a class="btn btn-ghost" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0/PixelClean_Setup.exe" download>Descargar gratis</a>
+          <button class="btn btn-ghost js-abrir-descarga">Descargar gratis</button>
         </div>
         <div class="price-card price-pro glass">
           <div class="price-top">
@@ -414,6 +414,19 @@
       </div>
     </div>
   </section>
+
+  <div class="pago-overlay" id="descargaOverlay">
+    <div class="pago-modal glass">
+      <button class="pago-close" id="descargaClose" aria-label="Cerrar">✕</button>
+      <span class="eyebrow">Version gratis</span>
+      <h3>Elegí cómo descargarlo</h3>
+      <p>Hasta 5 clips por día, todas las funciones incluidas.</p>
+      <div class="row">
+        <a class="btn btn-primary" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0/PixelClean_Setup.exe" download>Instalador para Windows (.exe)</a>
+        <a class="btn btn-ghost" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0-portable/PixelClean_Portable.rar" download>Versión portable (.rar)</a>
+      </div>
+    </div>
+  </div>
 
   <div class="pago-overlay" id="pagoOverlay">
     <div class="pago-modal glass">
@@ -633,8 +646,7 @@
       <div class="cta-band glass reveal">
         <h2>Un píxel quemado no debería arruinar la toma.</h2>
         <div class="ctas">
-          <a class="btn btn-primary js-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0/PixelClean_Setup.exe" download>Descargar instalador (.exe)</a>
-          <a class="btn btn-ghost js-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.0-portable/PixelClean_Portable.rar" download>Versión portable (.rar)</a>
+          <button class="btn btn-primary js-abrir-descarga">Descargar gratis</button>
         </div>
       </div>
     </div>
@@ -744,22 +756,19 @@
   window.addEventListener("pointermove", function (e) { if (dragging) setSplit(fromEvent(e)); });
   window.addEventListener("pointerup", function () { dragging = false; });
 
-  /* ---- donate popup on download ---- */
-  var overlay = document.getElementById("donateOverlay");
-  var closeBtn = document.getElementById("donateClose");
-  var skipBtn = document.getElementById("donateSkip");
-
-  function openDonate() { overlay.classList.add("open"); }
-  function closeDonate() { overlay.classList.remove("open"); }
-
-  document.querySelectorAll(".js-download").forEach(function (a) {
-    a.addEventListener("click", function () {
-      setTimeout(openDonate, 250);
-    });
+  /* ---- popup de descarga (gratis) ---- */
+  var descargaOverlay = document.getElementById("descargaOverlay");
+  document.querySelectorAll(".js-abrir-descarga").forEach(function (btn) {
+    btn.addEventListener("click", function () { descargaOverlay.classList.add("open"); });
   });
-  closeBtn.addEventListener("click", closeDonate);
-  skipBtn.addEventListener("click", closeDonate);
-  overlay.addEventListener("click", function (e) { if (e.target === overlay) closeDonate(); });
-  window.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDonate(); });
+  document.getElementById("descargaClose").addEventListener("click", function () {
+    descargaOverlay.classList.remove("open");
+  });
+  descargaOverlay.addEventListener("click", function (e) {
+    if (e.target === descargaOverlay) descargaOverlay.classList.remove("open");
+  });
+  window.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") descargaOverlay.classList.remove("open");
+  });
 })();
 </script>
