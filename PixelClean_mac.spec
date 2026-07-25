@@ -1,0 +1,67 @@
+# -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
+
+datas = [('web', 'web'), ('assets', 'assets')]
+binaries = [('ffmpeg_bin/ffmpeg', '.'), ('ffmpeg_bin/ffprobe', '.')]
+hiddenimports = []
+
+for paquete in ('webview',):
+    d, b, h = collect_all(paquete)
+    datas += d
+    binaries += b
+    hiddenimports += h
+
+a = Analysis(
+    ['webview_app.py'],
+    pathex=[],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    noarchive=False,
+    optimize=0,
+)
+pyz = PYZ(a.pure)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
+    name='PixelClean',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+)
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    name='PixelClean',
+)
+
+app = BUNDLE(
+    coll,
+    name='PixelClean.app',
+    icon='icon.icns',
+    bundle_identifier='com.pixelcleanpro.app',
+    info_plist={
+        'CFBundleName': 'PixelClean',
+        'CFBundleDisplayName': 'PixelClean',
+        'CFBundleShortVersionString': '1.0.0',
+        'NSHighResolutionCapable': 'True',
+    },
+)

@@ -62,10 +62,20 @@ LICENCIA_HASH_PRO = "ab45d00dee70232649d49b004f952ecb6c0ae0a00663c15f5d7b4c2a392
 LIMITE_GRATIS_DIARIO = 5
 
 
-def _ruta_datos_usuario(nombre_archivo):
-    carpeta = os.path.join(os.environ["LOCALAPPDATA"], "PixelClean")
+def _carpeta_datos_app():
+    if os.name == "nt":
+        base = os.environ["LOCALAPPDATA"]
+    elif sys.platform == "darwin":
+        base = os.path.join(os.path.expanduser("~"), "Library", "Application Support")
+    else:
+        base = os.environ.get("XDG_DATA_HOME", os.path.join(os.path.expanduser("~"), ".local", "share"))
+    carpeta = os.path.join(base, "PixelClean")
     os.makedirs(carpeta, exist_ok=True)
-    return os.path.join(carpeta, nombre_archivo)
+    return carpeta
+
+
+def _ruta_datos_usuario(nombre_archivo):
+    return os.path.join(_carpeta_datos_app(), nombre_archivo)
 
 
 def _pil_a_b64(img, formato="PNG"):
@@ -356,8 +366,7 @@ def _iniciar_servidor(api):
 
 
 def main():
-    carpeta_log = os.path.join(os.environ["LOCALAPPDATA"], "PixelClean")
-    os.makedirs(carpeta_log, exist_ok=True)
+    carpeta_log = _carpeta_datos_app()
     logging.basicConfig(
         filename=os.path.join(carpeta_log, "debug.log"), filemode="w",
         level=logging.DEBUG, format="%(asctime)s %(name)s %(levelname)s %(message)s",
@@ -380,15 +389,18 @@ def main():
         background_color="#0b0d12",
     )
     api.set_ventana(ventana)
-    # Instalado en Program Files, la carpeta del .exe queda de solo-lectura para
-    # usuarios sin admin. Si no se fija storage_path, WebView2 intenta crear su
-    # carpeta de perfil ahi mismo (o en un temp dir que pywebview borra al toque),
-    # falla en silencio (build sin consola) y la ventana se queda en negro para
-    # siempre en el background_color de arriba. Se fuerza una carpeta escribible
-    # por-usuario en LOCALAPPDATA.
-    carpeta_datos = os.path.join(os.environ["LOCALAPPDATA"], "PixelClean", "webview2_data")
-    os.makedirs(carpeta_datos, exist_ok=True)
-    webview.start(private_mode=False, storage_path=carpeta_datos)
+    if os.name == "nt":
+        # Instalado en Program Files, la carpeta del .exe queda de solo-lectura para
+        # usuarios sin admin. Si no se fija storage_path, WebView2 intenta crear su
+        # carpeta de perfil ahi mismo (o en un temp dir que pywebview borra al toque),
+        # falla en silencio (build sin consola) y la ventana se queda en negro para
+        # siempre en el background_color de arriba. Se fuerza una carpeta escribible
+        # por-usuario en LOCALAPPDATA. En macOS (backend Cocoa/WebKit) esto no aplica.
+        carpeta_datos = os.path.join(_carpeta_datos_app(), "webview2_data")
+        os.makedirs(carpeta_datos, exist_ok=True)
+        webview.start(private_mode=False, storage_path=carpeta_datos)
+    else:
+        webview.start(private_mode=False)
 
 
 if __name__ == "__main__":

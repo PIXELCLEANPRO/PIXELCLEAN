@@ -1,0 +1,64 @@
+name: Build macOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias de Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller pywebview pillow numpy opencv-python-headless
+
+      - name: Copiar binarios de ffmpeg (via Homebrew)
+        run: |
+          brew install ffmpeg
+          mkdir -p ffmpeg_bin
+          cp "$(brew --prefix ffmpeg)/bin/ffmpeg" ffmpeg_bin/ffmpeg
+          cp "$(brew --prefix ffmpeg)/bin/ffprobe" ffmpeg_bin/ffprobe
+          chmod +x ffmpeg_bin/ffmpeg ffmpeg_bin/ffprobe
+
+      - name: Generar icon.icns desde el logo
+        run: |
+          mkdir -p icon.iconset
+          sips -z 16 16     assets/logo_512.png --out icon.iconset/icon_16x16.png
+          sips -z 32 32     assets/logo_512.png --out icon.iconset/icon_16x16@2x.png
+          sips -z 32 32     assets/logo_512.png --out icon.iconset/icon_32x32.png
+          sips -z 64 64     assets/logo_512.png --out icon.iconset/icon_32x32@2x.png
+          sips -z 128 128   assets/logo_512.png --out icon.iconset/icon_128x128.png
+          sips -z 256 256   assets/logo_512.png --out icon.iconset/icon_128x128@2x.png
+          sips -z 256 256   assets/logo_512.png --out icon.iconset/icon_256x256.png
+          sips -z 512 512   assets/logo_512.png --out icon.iconset/icon_256x256@2x.png
+          sips -z 512 512   assets/logo_512.png --out icon.iconset/icon_512x512.png
+          cp assets/logo_512.png icon.iconset/icon_512x512@2x.png
+          iconutil -c icns icon.iconset -o icon.icns
+
+      - name: Compilar con PyInstaller
+        run: pyinstaller --noconfirm PixelClean_mac.spec
+
+      - name: Empaquetar en .dmg
+        run: |
+          mkdir -p dmg_root
+          cp -R "dist/PixelClean.app" dmg_root/
+          ln -s /Applications dmg_root/Applications
+          hdiutil create -volname "PixelClean" -srcfolder dmg_root -ov -format UDZO PixelClean_Mac.dmg
+
+      - name: Subir como asset del release v1.0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload v1.0 PixelClean_Mac.dmg --repo ${{ github.repository }} --clobber
+
+      - name: Subir tambien como artifact del workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: PixelClean_Mac
+          path: PixelClean_Mac.dmg
