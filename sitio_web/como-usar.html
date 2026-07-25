@@ -1,0 +1,418 @@
+<title>Cómo usar PixelClean — Guía completa</title>
+<meta name="description" content="Guía animada de todas las funciones de PixelClean: cargar clips, pintar la máscara, elegir motor, procesar, licencia y más." />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%234c86ff'/%3E%3Cpolygon points='8 6 18 12 8 18' fill='white'/%3E%3C/svg%3E" />
+
+<style>
+  :root {
+    --ink: #1d1d1f; --ink-soft: rgba(29,29,31,.64); --ink-faint: rgba(29,29,31,.4);
+    --paper: #eef1f8; --panel: rgba(255,255,255,.55); --panel-2: rgba(255,255,255,.35);
+    --line: rgba(20,20,40,.1); --signal: #0071e3; --signal-ink: #ffffff;
+    --accent-2: #8b5cf6; --accent-3: #12b8ab; --stuck: #1f9d4a;
+    --glass-border: rgba(255,255,255,.6); --blob-opacity: .32;
+    --shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 1px 2px rgba(20,22,29,.05), 0 24px 48px -16px rgba(20,22,29,.2);
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    --wrap: 1080px; --r-lg: 28px; --r-md: 20px; --r-sm: 13px;
+    --toolbar-bg: rgba(18,19,28,.9);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f5f5f7; --ink-soft: rgba(245,245,247,.68); --ink-faint: rgba(245,245,247,.42);
+      --paper: #0b0c10; --panel: rgba(32,33,40,.45); --panel-2: rgba(32,33,40,.3);
+      --line: rgba(255,255,255,.12); --signal: #409cff; --signal-ink: #06070a;
+      --accent-2: #a78bfa; --accent-3: #2fe0cf; --stuck: #4be890;
+      --glass-border: rgba(255,255,255,.14); --blob-opacity: .55;
+      --shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 1px 2px rgba(0,0,0,.4), 0 24px 48px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #f5f5f7; --ink-soft: rgba(245,245,247,.68); --ink-faint: rgba(245,245,247,.42);
+    --paper: #0b0c10; --panel: rgba(32,33,40,.45); --panel-2: rgba(32,33,40,.3);
+    --line: rgba(255,255,255,.12); --signal: #409cff; --signal-ink: #06070a;
+    --accent-2: #a78bfa; --accent-3: #2fe0cf; --stuck: #4be890;
+    --glass-border: rgba(255,255,255,.14); --blob-opacity: .55;
+    --shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 1px 2px rgba(0,0,0,.4), 0 24px 48px -16px rgba(0,0,0,.6);
+  }
+  :root[data-theme="light"] {
+    --ink: #1d1d1f; --ink-soft: rgba(29,29,31,.64); --ink-faint: rgba(29,29,31,.4);
+    --paper: #eef1f8; --panel: rgba(255,255,255,.55); --panel-2: rgba(255,255,255,.35);
+    --line: rgba(20,20,40,.1); --signal: #0071e3; --signal-ink: #ffffff;
+    --accent-2: #8b5cf6; --accent-3: #12b8ab; --stuck: #1f9d4a;
+    --glass-border: rgba(255,255,255,.6); --blob-opacity: .32;
+    --shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 1px 2px rgba(20,22,29,.05), 0 24px 48px -16px rgba(20,22,29,.2);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body);
+    font-size: 17px; line-height: 1.55; -webkit-font-smoothing: antialiased;
+    position: relative; isolation: isolate;
+  }
+  body::before {
+    content: ""; position: fixed; inset: -20%; z-index: -1;
+    background:
+      radial-gradient(30% 32% at 16% 18%, var(--signal) 0%, transparent 72%),
+      radial-gradient(34% 36% at 88% 12%, var(--accent-2) 0%, transparent 72%),
+      radial-gradient(38% 40% at 48% 96%, var(--accent-3) 0%, transparent 72%);
+    filter: blur(90px) saturate(160%); opacity: var(--blob-opacity);
+    animation: drift 44s ease-in-out infinite alternate;
+  }
+  @keyframes drift { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(-3%,3%,0) scale(1.06); } }
+  @media (prefers-reduced-motion: reduce) { body::before { animation: none; } html { scroll-behavior: auto; } }
+
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; margin: 0; color: var(--ink); }
+  p { margin: 0; }
+  a { color: inherit; }
+  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 28px; }
+  .glass { background: var(--panel); border: 1px solid var(--glass-border); -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%); box-shadow: var(--shadow); }
+
+  .btn { font-family: var(--font-display); font-weight: 600; font-size: 14.5px; border-radius: 999px; padding: 13px 24px; border: 1px solid transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+  .btn-primary { background: linear-gradient(135deg, var(--signal), var(--accent-2)); color: var(--signal-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 10px 24px -8px color-mix(in srgb, var(--signal) 65%, transparent); }
+
+  header.nav { position: sticky; top: 0; z-index: 40; -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); background: color-mix(in srgb, var(--paper) 55%, transparent); border-bottom: 1px solid var(--glass-border); }
+  .nav-row { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+  .brand { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 700; font-size: 17px; }
+  .brand svg { color: var(--signal); }
+  .nav-links { display: flex; gap: 30px; font-family: var(--font-display); font-weight: 590; font-size: 14px; }
+  .nav-links a { color: var(--ink-soft); text-decoration: none; }
+  .nav-links a:hover, .nav-links a.active { color: var(--ink); }
+  @media (max-width: 780px) { .nav-links { display: none; } }
+
+  .hero { padding: 70px 0 20px; }
+  .eyebrow { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--signal); display: flex; align-items: center; gap: 8px; }
+  .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--stuck); box-shadow: 0 0 0 3px color-mix(in srgb, var(--stuck) 25%, transparent); }
+  .hero h1 { font-size: clamp(32px, 4.6vw, 52px); line-height: 1.05; margin: 14px 0 16px; }
+  .hero p.lede { font-size: 18px; color: var(--ink-soft); max-width: 62ch; }
+
+  /* jump nav */
+  .jumpnav { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 26px; }
+  .jumpnav a {
+    font-family: var(--font-mono); font-size: 12px; text-decoration: none; color: var(--ink-soft);
+    padding: 6px 12px; border-radius: 999px; border: 1px solid var(--glass-border); background: var(--panel-2);
+  }
+  .jumpnav a:hover { color: var(--ink); border-color: var(--signal); }
+
+  .step-section { padding: 64px 0; border-top: 1px solid var(--glass-border); scroll-margin-top: 84px; }
+  .step-grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 44px; align-items: center; }
+  @media (max-width: 900px) { .step-grid { grid-template-columns: 1fr; } }
+  .step-grid.reverse .step-demo { order: -1; }
+  .step-n { font-family: var(--font-mono); font-size: 12.5px; color: var(--signal); letter-spacing: .08em; margin-bottom: 10px; }
+  .step-info h2 { font-size: clamp(22px, 2.6vw, 30px); margin-bottom: 12px; }
+  .step-info p { color: var(--ink-soft); font-size: 15.5px; margin-bottom: 14px; }
+  .step-info ul { margin: 0; padding-left: 18px; color: var(--ink-soft); font-size: 14.5px; display: flex; flex-direction: column; gap: 6px; }
+  .step-demo { border-radius: var(--r-lg); padding: 22px; }
+
+  /* ---- mini app chrome shared ---- */
+  .app-mock { border-radius: 14px; overflow: hidden; background: #0e0f13; box-shadow: 0 20px 44px rgba(0,0,0,.35); }
+  .app-mock .bar { display: flex; gap: 6px; padding: 9px 12px; background: #14161d; }
+  .app-mock .bar span { width: 9px; height: 9px; border-radius: 50%; background: #2a2d38; }
+
+  /* ---- demo 1: cargar clips ---- */
+  .drop-demo { padding: 26px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .drop-zone {
+    width: 100%; height: 100px; border: 2px dashed #3a3d4a; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; color: #7a8090; font-size: 12.5px;
+    position: relative; overflow: hidden;
+  }
+  .file-chip {
+    position: absolute; display: flex; align-items: center; gap: 6px; background: #1c2030; border: 1px solid #3a3d4a;
+    border-radius: 8px; padding: 6px 10px; font-size: 11.5px; color: #cfd3e0;
+    animation: file-drop 4.5s ease-in-out infinite;
+  }
+  @keyframes file-drop {
+    0%   { top: -30px; left: 20px; opacity: 0; }
+    18%  { top: 10px; left: 40%; opacity: 1; }
+    45%, 55% { top: 34px; left: 40%; opacity: 1; }
+    70%  { top: 34px; left: 40%; opacity: 0; transform: scale(.9); }
+    100% { top: -30px; left: 20px; opacity: 0; }
+  }
+  @keyframes zone-glow { 0%, 40% { border-color: #3a3d4a; } 48%, 62% { border-color: var(--signal); background: rgba(76,134,255,.08); } 75%, 100% { border-color: #3a3d4a; } }
+  .drop-zone { animation: zone-glow 4.5s ease-in-out infinite; }
+  .clip-row-demo {
+    width: 100%; display: flex; align-items: center; gap: 10px; background: #1c2030; border-radius: 8px; padding: 8px 12px;
+    font-size: 11.5px; color: #cfd3e0; opacity: 0; animation: row-in 4.5s ease-in-out infinite;
+  }
+  @keyframes row-in { 0%, 62% { opacity: 0; transform: translateY(6px); } 74%, 100% { opacity: 1; transform: translateY(0); } }
+
+  /* ---- demo 2: mascara ---- */
+  .mask-demo { padding: 0; }
+  .mask-canvas { position: relative; height: 220px; background: radial-gradient(circle at 60% 40%, #1b2a44, #0c1420 70%); }
+  .stuck-dot {
+    position: absolute; top: 96px; left: 168px; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--stuck); box-shadow: 0 0 12px var(--stuck);
+    animation: dot-heal 5s ease-in-out infinite;
+  }
+  @keyframes dot-heal { 0%, 55% { opacity: 1; } 65%, 100% { opacity: 0; } }
+  .brush-ring {
+    position: absolute; top: 78px; left: 150px; width: 46px; height: 46px; border-radius: 50%;
+    border: 2px solid rgba(76,134,255,.9); animation: brush-move 5s ease-in-out infinite;
+  }
+  @keyframes brush-move {
+    0%   { top: 20px; left: 20px; opacity: 0; }
+    12%  { opacity: 1; }
+    30%  { top: 55px; left: 128px; }
+    45%  { top: 73px; left: 145px; }
+    60%  { top: 73px; left: 145px; opacity: 1; }
+    68%  { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  .mask-stroke {
+    position: absolute; top: 73px; left: 145px; width: 46px; height: 46px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(76,134,255,.55), rgba(76,134,255,0) 70%);
+    opacity: 0; animation: stroke-paint 5s ease-in-out infinite;
+  }
+  @keyframes stroke-paint { 0%, 44% { opacity: 0; transform: scale(.6); } 60%, 100% { opacity: 1; transform: scale(1); } }
+  .mask-bar { display: flex; gap: 14px; padding: 10px 16px; background: #14161d; border-top: 1px solid #23262f; }
+  .mask-field { font-size: 10.5px; color: #7a8090; }
+  .mask-field b { display: block; font-size: 12px; color: #e6e8ef; font-family: var(--font-mono); margin-top: 2px; }
+
+  /* ---- demo 3: motor ---- */
+  .engine-demo { padding: 22px; display: flex; flex-direction: column; gap: 10px; }
+  .engine-opt { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 10px; border: 1.5px solid #23262f; background: #14161d; font-size: 12.5px; color: #cfd3e0; position: relative; }
+  .engine-opt .dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #3a3d4a; flex-shrink: 0; }
+  .engine-opt.sel { border-color: var(--signal); }
+  .engine-opt.sel .dot { border-color: var(--signal); background: var(--signal); }
+  #eBlur { animation: sel-toggle-a 6s ease-in-out infinite; }
+  #eCv { animation: sel-toggle-b 6s ease-in-out infinite; }
+  @keyframes sel-toggle-a { 0%, 45% { border-color: var(--signal); } 55%, 100% { border-color: #23262f; } }
+  @keyframes sel-toggle-b { 0%, 45% { border-color: #23262f; } 55%, 100% { border-color: var(--signal); } }
+  .preview-swap { height: 90px; border-radius: 10px; margin-top: 4px; background: linear-gradient(120deg,#101a2e,#1b2f4d); position: relative; overflow: hidden; }
+  .preview-swap .after { position: absolute; inset: 0; background: linear-gradient(120deg,#12213a,#173352); clip-path: inset(0 100% 0 0); animation: swap-reveal 6s ease-in-out infinite; }
+  @keyframes swap-reveal { 0%, 50% { clip-path: inset(0 100% 0 0); } 80%, 100% { clip-path: inset(0 0 0 0); } }
+
+  /* ---- demo 4: procesar ---- */
+  .proc-demo { padding: 26px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .ring-demo { position: relative; width: 120px; height: 120px; }
+  .ring-demo svg { transform: rotate(-90deg); }
+  .ring-demo circle { fill: none; stroke-width: 10; }
+  .ring-track { stroke: #23262f; }
+  .ring-fill { stroke: var(--signal); stroke-linecap: round; stroke-dasharray: 314; stroke-dashoffset: 314; animation: ring-fill 4s ease-in-out infinite; }
+  @keyframes ring-fill { 0% { stroke-dashoffset: 314; } 85%, 100% { stroke-dashoffset: 20; } }
+  .ring-demo .pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 20px; color: #e6e8ef; }
+  .log-demo { width: 100%; background: #14161d; border-radius: 8px; padding: 10px 12px; font-family: var(--font-mono); font-size: 10.5px; color: #7a8090; min-height: 40px; }
+  .log-demo span { display: block; opacity: 0; animation: log-in 4s ease-in-out infinite; }
+  .log-demo span:nth-child(1) { animation-delay: 0s; }
+  .log-demo span:nth-child(2) { animation-delay: .3s; color: var(--stuck); }
+  @keyframes log-in { 0%, 55% { opacity: 0; } 65%, 100% { opacity: 1; } }
+
+  .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 860px) { .feature-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .feature-grid { grid-template-columns: 1fr; } }
+  .feature { border-radius: var(--r-md); padding: 22px; }
+  .feature .ic { color: var(--signal); margin-bottom: 12px; }
+  .feature h3 { font-size: 15px; font-weight: 650; margin-bottom: 6px; }
+  .feature p { font-size: 13.5px; color: var(--ink-soft); }
+
+  kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2); border: 1px solid var(--glass-border); border-radius: 5px; padding: 2px 6px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .file-chip, .drop-zone, .clip-row-demo, .stuck-dot, .brush-ring, .mask-stroke,
+    #eBlur, #eCv, .preview-swap .after, .ring-fill, .log-demo span { animation: none !important; }
+    .clip-row-demo, .mask-stroke, .log-demo span { opacity: 1; }
+    .ring-fill { stroke-dashoffset: 20; }
+  }
+
+  footer { padding: 40px 0 60px; border-top: 1px solid var(--glass-border); margin-top: 20px; }
+  .foot-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .foot-links { display: flex; gap: 24px; font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint); }
+  .foot-links a { text-decoration: none; }
+</style>
+
+<header class="nav">
+  <div class="wrap nav-row">
+    <a class="brand" href="index.html" style="text-decoration:none">
+      <svg width="20" height="20" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+      PixelClean
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Inicio</a>
+      <a href="instalacion.html">Instalación</a>
+      <a href="como-usar.html" class="active">Cómo usar</a>
+      <a href="index.html#preguntas">Preguntas</a>
+    </nav>
+    <a class="btn btn-primary" href="index.html#descarga">Descargar</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <span class="eyebrow">Guía de uso</span>
+      <h1>Todo lo que hace PixelClean, en cuatro pasos.</h1>
+      <p class="lede">El mismo flujo que ves al abrir la app, explicado con animaciones — cargar el clip, marcar el defecto, elegir motor y procesar. Al final, todas las funciones extra.</p>
+      <div class="jumpnav">
+        <a href="#paso1">01 Clip</a>
+        <a href="#paso2">02 Máscara</a>
+        <a href="#paso3">03 Motor</a>
+        <a href="#paso4">04 Procesar</a>
+        <a href="#funciones">Funciones extra</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="step-section" id="paso1">
+    <div class="wrap step-grid">
+      <div class="step-info">
+        <div class="step-n">PASO 01</div>
+        <h2>Cargá tus clips</h2>
+        <p>Arrastrá los videos directo a la ventana, o usá el botón "Cargar clips..." para elegirlos desde el explorador. Podés cargar varios a la vez si comparten el mismo defecto de sensor.</p>
+        <ul>
+          <li>Formatos: MP4, MOV, MXF, AVI</li>
+          <li>Lee la metadata de cámara automáticamente (ISO, lente, timecode, perfil de color)</li>
+          <li>La lista se puede reordenar y quitar clips antes de seguir</li>
+        </ul>
+      </div>
+      <div class="step-demo glass">
+        <div class="app-mock">
+          <div class="bar"><span></span><span></span><span></span></div>
+          <div class="drop-demo">
+            <div class="drop-zone">
+              Arrastrá tus clips acá
+              <div class="file-chip">📹 clip_A7III.mp4</div>
+            </div>
+            <div class="clip-row-demo">📹 clip_A7III.mp4 — Sony ILCE-7M3 · 4K · 25fps</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step-section" id="paso2">
+    <div class="wrap step-grid reverse">
+      <div class="step-info">
+        <div class="step-n">PASO 02</div>
+        <h2>Pintá la máscara, una sola vez</h2>
+        <p>Sobre una foto de muestra, marcás con el pincel el punto quemado. Herramientas iguales a un editor de fotos: tamaño, dureza y opacidad ajustables arrastrando los números.</p>
+        <ul>
+          <li>Atajos: <kbd>B</kbd> pincel, <kbd>E</kbd> goma, <kbd>Espacio</kbd> mano</li>
+          <li><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd> deshacer y rehacer</li>
+          <li>Zoom y pan para marcar con precisión en 4K</li>
+        </ul>
+      </div>
+      <div class="step-demo glass">
+        <div class="app-mock">
+          <div class="bar"><span></span><span></span><span></span></div>
+          <div class="mask-demo">
+            <div class="mask-canvas">
+              <div class="stuck-dot"></div>
+              <div class="mask-stroke"></div>
+              <div class="brush-ring"></div>
+            </div>
+            <div class="mask-bar">
+              <div class="mask-field">TAMAÑO<b>28px</b></div>
+              <div class="mask-field">DUREZA<b>100%</b></div>
+              <div class="mask-field">OPACIDAD<b>100%</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step-section" id="paso3">
+    <div class="wrap step-grid">
+      <div class="step-info">
+        <div class="step-n">PASO 03</div>
+        <h2>Elegís motor y calidad</h2>
+        <p>Dos motores de reparación conviven en la misma app. La vista previa antes/después se actualiza al instante al cambiar de uno a otro, antes de procesar un solo cuadro real.</p>
+        <ul>
+          <li><b>Blur:</b> rápido, ideal para revisar el lote entero</li>
+          <li><b>OpenCV Inpaint:</b> más lento, mejor en fondos con textura</li>
+          <li>Velocidad (Rápido/Equilibrado/Calidad) y resolución de salida configurables</li>
+        </ul>
+      </div>
+      <div class="step-demo glass">
+        <div class="app-mock">
+          <div class="bar"><span></span><span></span><span></span></div>
+          <div class="engine-demo">
+            <div class="engine-opt sel" id="eBlur"><span class="dot"></span>Desenfoque gaussiano</div>
+            <div class="engine-opt" id="eCv"><span class="dot"></span>OpenCV Inpainting</div>
+            <div class="preview-swap"><div class="after"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step-section" id="paso4">
+    <div class="wrap step-grid reverse">
+      <div class="step-info">
+        <div class="step-n">PASO 04</div>
+        <h2>Procesás todo el lote</h2>
+        <p>Aplica la máscara a cada cuadro de cada clip con ffmpeg. Un anillo de progreso general y una barra por clip te muestran el avance en vivo.</p>
+        <ul>
+          <li>Cancelar en cualquier momento, sin dejar archivos a medio hacer</li>
+          <li>Log detallado de cada clip procesado</li>
+          <li>Los archivos reparados quedan en una carpeta "reparados" al lado del original</li>
+        </ul>
+      </div>
+      <div class="step-demo glass">
+        <div class="app-mock">
+          <div class="bar"><span></span><span></span><span></span></div>
+          <div class="proc-demo">
+            <div class="ring-demo">
+              <svg width="120" height="120"><circle class="ring-track" cx="60" cy="60" r="50"/><circle class="ring-fill" cx="60" cy="60" r="50"/></svg>
+              <div class="pct">100%</div>
+            </div>
+            <div class="log-demo">
+              <span>Procesando clip_A7III.mp4...</span>
+              <span>OK: clip_A7III.mp4 → clip_A7III_reparado.mp4</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step-section" id="funciones">
+    <div class="wrap">
+      <div class="step-n" style="margin-bottom:6px">EXTRAS</div>
+      <h2 style="font-size:clamp(24px,2.8vw,32px);margin-bottom:36px">Funciones que no son parte del asistente</h2>
+      <div class="feature-grid">
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="M10.5 12.5L20 3M20 3h-4M20 3v4"/></svg></div>
+          <h3>Activar Pro</h3>
+          <p>Ícono de llave junto al tema. Pegás tu clave de compra y el límite diario desaparece para siempre.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+          <h3>Actualizaciones automáticas</h3>
+          <p>La campanita avisa cuando hay una versión nueva. Un click descarga e instala sola, sin perder tu licencia.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg></div>
+          <h3>Modo claro y oscuro</h3>
+          <p>Arranca en oscuro; la perilla al lado de la campanita cambia el tema al instante.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+          <h3>Zoom y mano</h3>
+          <p>Rueda del mouse para zoom, tecla espacio para pan — igual que en un editor profesional.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+          <h3>Deshacer / rehacer</h3>
+          <p>Historial completo de pinceladas mientras armás la máscara, sin límite de pasos.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div>
+          <h3>Cancelar procesamiento</h3>
+          <p>Un botón corta el lote en cualquier momento; el clip a medio hacer se descarta solo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-row">
+    <div class="brand"><svg width="18" height="18" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>PixelClean</div>
+    <nav class="foot-links">
+      <a href="index.html">Inicio</a>
+      <a href="instalacion.html">Instalación</a>
+      <a href="index.html#preguntas">Preguntas</a>
+    </nav>
+  </div>
+</footer>

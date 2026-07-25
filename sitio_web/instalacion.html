@@ -1,0 +1,346 @@
+<title>Instalación — PixelClean</title>
+<meta name="description" content="Cómo instalar PixelClean en Windows y macOS, paso a paso, incluyendo qué hacer con la advertencia de SmartScreen/Gatekeeper." />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%234c86ff'/%3E%3Cpolygon points='8 6 18 12 8 18' fill='white'/%3E%3C/svg%3E" />
+
+<style>
+  :root {
+    --ink: #1d1d1f; --ink-soft: rgba(29,29,31,.64); --ink-faint: rgba(29,29,31,.4);
+    --paper: #eef1f8; --panel: rgba(255,255,255,.55); --panel-2: rgba(255,255,255,.35);
+    --line: rgba(20,20,40,.1); --signal: #0071e3; --signal-ink: #ffffff;
+    --accent-2: #8b5cf6; --accent-3: #12b8ab; --stuck: #1f9d4a;
+    --glass-border: rgba(255,255,255,.6); --blob-opacity: .32;
+    --shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 1px 2px rgba(20,22,29,.05), 0 24px 48px -16px rgba(20,22,29,.2);
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+    --wrap: 1080px; --r-lg: 28px; --r-md: 20px; --r-sm: 13px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f5f5f7; --ink-soft: rgba(245,245,247,.68); --ink-faint: rgba(245,245,247,.42);
+      --paper: #0b0c10; --panel: rgba(32,33,40,.45); --panel-2: rgba(32,33,40,.3);
+      --line: rgba(255,255,255,.12); --signal: #409cff; --signal-ink: #06070a;
+      --accent-2: #a78bfa; --accent-3: #2fe0cf; --stuck: #4be890;
+      --glass-border: rgba(255,255,255,.14); --blob-opacity: .55;
+      --shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 1px 2px rgba(0,0,0,.4), 0 24px 48px -16px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #f5f5f7; --ink-soft: rgba(245,245,247,.68); --ink-faint: rgba(245,245,247,.42);
+    --paper: #0b0c10; --panel: rgba(32,33,40,.45); --panel-2: rgba(32,33,40,.3);
+    --line: rgba(255,255,255,.12); --signal: #409cff; --signal-ink: #06070a;
+    --accent-2: #a78bfa; --accent-3: #2fe0cf; --stuck: #4be890;
+    --glass-border: rgba(255,255,255,.14); --blob-opacity: .55;
+    --shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 1px 2px rgba(0,0,0,.4), 0 24px 48px -16px rgba(0,0,0,.6);
+  }
+  :root[data-theme="light"] {
+    --ink: #1d1d1f; --ink-soft: rgba(29,29,31,.64); --ink-faint: rgba(29,29,31,.4);
+    --paper: #eef1f8; --panel: rgba(255,255,255,.55); --panel-2: rgba(255,255,255,.35);
+    --line: rgba(20,20,40,.1); --signal: #0071e3; --signal-ink: #ffffff;
+    --accent-2: #8b5cf6; --accent-3: #12b8ab; --stuck: #1f9d4a;
+    --glass-border: rgba(255,255,255,.6); --blob-opacity: .32;
+    --shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 1px 2px rgba(20,22,29,.05), 0 24px 48px -16px rgba(20,22,29,.2);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body);
+    font-size: 17px; line-height: 1.55; -webkit-font-smoothing: antialiased;
+    position: relative; isolation: isolate;
+  }
+  body::before {
+    content: ""; position: fixed; inset: -20%; z-index: -1;
+    background:
+      radial-gradient(30% 32% at 16% 18%, var(--signal) 0%, transparent 72%),
+      radial-gradient(34% 36% at 88% 12%, var(--accent-2) 0%, transparent 72%),
+      radial-gradient(38% 40% at 48% 96%, var(--accent-3) 0%, transparent 72%);
+    filter: blur(90px) saturate(160%); opacity: var(--blob-opacity);
+    animation: drift 44s ease-in-out infinite alternate;
+  }
+  @keyframes drift { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(-3%,3%,0) scale(1.06); } }
+  @media (prefers-reduced-motion: reduce) { body::before { animation: none; } html { scroll-behavior: auto; } }
+
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; margin: 0; color: var(--ink); }
+  p { margin: 0; }
+  a { color: inherit; }
+  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 28px; }
+
+  .glass { background: var(--panel); border: 1px solid var(--glass-border); -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%); box-shadow: var(--shadow); }
+
+  .btn {
+    font-family: var(--font-display); font-weight: 600; font-size: 14.5px; border-radius: 999px; padding: 13px 24px;
+    border: 1px solid transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    transition: transform .18s ease, filter .18s ease; text-decoration: none;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--signal), var(--accent-2)); color: var(--signal-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 10px 24px -8px color-mix(in srgb, var(--signal) 65%, transparent); }
+  .btn-primary:hover { filter: brightness(1.07); }
+  .btn-ghost { background: var(--panel-2); color: var(--ink); border-color: var(--glass-border); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); }
+  .btn-ghost:hover { background: var(--panel); }
+
+  header.nav { position: sticky; top: 0; z-index: 40; -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); background: color-mix(in srgb, var(--paper) 55%, transparent); border-bottom: 1px solid var(--glass-border); }
+  .nav-row { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+  .brand { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 700; font-size: 17px; }
+  .brand svg { color: var(--signal); }
+  .nav-links { display: flex; gap: 30px; font-family: var(--font-display); font-weight: 590; font-size: 14px; }
+  .nav-links a { color: var(--ink-soft); text-decoration: none; }
+  .nav-links a:hover, .nav-links a.active { color: var(--ink); }
+  @media (max-width: 780px) { .nav-links { display: none; } }
+
+  .hero { padding: 70px 0 20px; }
+  .eyebrow { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--signal); display: flex; align-items: center; gap: 8px; }
+  .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--stuck); box-shadow: 0 0 0 3px color-mix(in srgb, var(--stuck) 25%, transparent); }
+  .hero h1 { font-size: clamp(32px, 4.6vw, 52px); line-height: 1.05; margin: 14px 0 16px; }
+  .hero p.lede { font-size: 18px; color: var(--ink-soft); max-width: 60ch; }
+
+  .section { padding: 60px 0; }
+  .section-head { max-width: 640px; margin-bottom: 36px; }
+  .section-head h2 { font-size: clamp(24px, 2.8vw, 32px); margin: 12px 0 10px; }
+  .section-head p { color: var(--ink-soft); font-size: 16px; }
+
+  .demo-shell { border-radius: var(--r-lg); padding: 36px; display: flex; justify-content: center; }
+
+  /* ---- Windows SmartScreen mock ---- */
+  .win-stage { width: 100%; max-width: 480px; position: relative; }
+  .win-dialog {
+    background: #f3f3f3; border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,.35);
+    overflow: hidden; font-family: "Segoe UI", var(--font-body); color: #1b1b1b;
+  }
+  .win-titlebar { background: #0a5ac4; color: #fff; font-size: 12px; padding: 8px 12px; display: flex; justify-content: space-between; }
+  .win-body { padding: 20px 22px 22px; }
+  .win-shield { display: flex; gap: 14px; align-items: flex-start; }
+  .win-shield svg { flex-shrink: 0; margin-top: 2px; }
+  .win-title { font-size: 15.5px; font-weight: 700; margin-bottom: 6px; }
+  .win-desc { font-size: 12.5px; line-height: 1.5; color: #3a3a3a; }
+  .win-link { display: inline-block; margin-top: 10px; font-size: 12.5px; color: #0a5ac4; cursor: default; position: relative; }
+  .win-extra { max-height: 0; overflow: hidden; opacity: 0; transition: none; }
+  .win-appinfo { font-size: 11.5px; color: #555; padding: 10px 0 4px 38px; }
+  .win-appinfo div { margin-bottom: 3px; }
+  .win-btnrow { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 22px 18px; }
+  .win-btn { font-size: 12.5px; padding: 7px 18px; border-radius: 3px; border: 1px solid #adadad; background: #e1e1e1; cursor: default; }
+  .win-btn.primary { background: #0a5ac4; color: #fff; border-color: #0a5ac4; }
+
+  .cursor {
+    position: absolute; width: 22px; height: 22px; z-index: 5; pointer-events: none;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.4));
+  }
+
+  @keyframes cur-move-info {
+    0%, 8%   { top: 210px; left: 250px; }
+    22%, 40% { top: 130px; left: 118px; }
+    46%, 100%{ top: 130px; left: 118px; }
+  }
+  @keyframes cur-move-run {
+    0%, 46%  { top: 130px; left: 118px; opacity: 0; }
+    50%      { opacity: 1; }
+    62%, 80% { top: 236px; left: 330px; opacity: 1; }
+    86%, 100%{ top: 236px; left: 330px; opacity: 0; }
+  }
+  .win-cursor-1 { animation: cur-move-info 8s ease-in-out infinite; }
+  .win-cursor-2 { animation: cur-move-run 8s ease-in-out infinite; }
+
+  @keyframes link-pulse { 0%, 20% { opacity: 1; } 24%, 100% { opacity: .35; } }
+  .win-link { animation: link-pulse 8s ease-in-out infinite; }
+
+  @keyframes extra-reveal {
+    0%, 22%  { max-height: 0; opacity: 0; }
+    30%, 82% { max-height: 80px; opacity: 1; }
+    88%, 100%{ max-height: 0; opacity: 0; }
+  }
+  .win-extra { animation: extra-reveal 8s ease-in-out infinite; }
+
+  @keyframes btn-pulse {
+    0%, 58%  { box-shadow: none; transform: scale(1); }
+    64%      { box-shadow: 0 0 0 4px color-mix(in srgb, var(--signal) 35%, transparent); transform: scale(.97); }
+    70%, 100%{ box-shadow: none; transform: scale(1); }
+  }
+  .win-btn.primary { animation: btn-pulse 8s ease-in-out infinite; }
+
+  @keyframes toast-in {
+    0%, 84%   { opacity: 0; transform: translateY(6px); }
+    90%, 100% { opacity: 1; transform: translateY(0); }
+  }
+  .win-toast { animation: toast-in 8s ease-in-out infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .win-cursor-1, .win-cursor-2, .win-link, .win-extra, .win-btn.primary, .win-toast { animation: none !important; }
+    .win-extra { max-height: 80px; opacity: 1; }
+    .win-cursor-1, .win-cursor-2 { display: none; }
+  }
+
+  .steps-mini { display: flex; flex-direction: column; gap: 14px; margin-top: 28px; max-width: 480px; }
+  .steps-mini li { display: flex; gap: 12px; font-size: 14.5px; color: var(--ink-soft); list-style: none; }
+  .steps-mini b { color: var(--ink); }
+  .steps-mini .n {
+    flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--glass-border);
+    display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; color: var(--signal);
+  }
+
+  /* ---- Mac Gatekeeper mock ---- */
+  .mac-stage { width: 100%; max-width: 380px; position: relative; }
+  .mac-dialog { background: #ececec; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,.35); padding: 22px; font-family: var(--font-body); color: #1b1b1b; text-align: center; }
+  .mac-dialog .icon { width: 46px; height: 46px; border-radius: 10px; background: linear-gradient(135deg,#666,#333); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; }
+  .mac-dialog h4 { font-size: 14px; margin: 0 0 8px; }
+  .mac-dialog p { font-size: 11.5px; color: #444; line-height: 1.5; margin-bottom: 16px; }
+  .mac-btnrow { display: flex; gap: 8px; justify-content: center; }
+  .mac-btn { font-size: 12px; padding: 6px 16px; border-radius: 6px; border: 1px solid #c7c7c7; background: #fff; }
+  .mac-btn.primary { background: #0a5ac4; color: #fff; border-color: #0a5ac4; }
+  @keyframes mac-btn-pulse { 0%,55%{box-shadow:none;} 62%{box-shadow:0 0 0 4px color-mix(in srgb, var(--signal) 35%, transparent);} 70%,100%{box-shadow:none;} }
+  .mac-btn.primary { animation: mac-btn-pulse 6s ease-in-out infinite; }
+  .mac-cursor { position: absolute; width: 20px; height: 20px; }
+  @keyframes mac-cur { 0%,8%{top:190px;left:200px;opacity:0;} 16%{opacity:1;} 30%,55%{top:170px;left:230px;opacity:1;} 62%,100%{opacity:0;} }
+  .mac-cursor { animation: mac-cur 6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .mac-btn.primary, .mac-cursor { animation: none !important; } .mac-cursor { display:none; } }
+
+  .faq { max-width: 760px; }
+  details.faq-item { border-bottom: 1px solid var(--glass-border); padding: 18px 0; }
+  details.faq-item summary { cursor: pointer; list-style: none; font-family: var(--font-display); font-weight: 650; font-size: 15.5px; display: flex; justify-content: space-between; gap: 16px; }
+  details.faq-item summary::-webkit-details-marker { display: none; }
+  details.faq-item summary::after { content: "+"; font-size: 19px; color: var(--signal); }
+  details.faq-item[open] summary::after { content: "−"; }
+  details.faq-item p { color: var(--ink-soft); font-size: 15px; margin-top: 10px; max-width: 62ch; }
+
+  footer { padding: 40px 0 60px; border-top: 1px solid var(--glass-border); margin-top: 20px; }
+  .foot-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .foot-links { display: flex; gap: 24px; font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint); }
+  .foot-links a { text-decoration: none; }
+</style>
+
+<header class="nav">
+  <div class="wrap nav-row">
+    <a class="brand" href="index.html" style="text-decoration:none">
+      <svg width="20" height="20" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+      PixelClean
+    </a>
+    <nav class="nav-links">
+      <a href="index.html">Inicio</a>
+      <a href="instalacion.html" class="active">Instalación</a>
+      <a href="como-usar.html">Cómo usar</a>
+      <a href="index.html#preguntas">Preguntas</a>
+    </nav>
+    <a class="btn btn-primary" href="index.html#descarga">Descargar</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <span class="eyebrow">Guía de instalación</span>
+      <h1>Instalar PixelClean, paso a paso.</h1>
+      <p class="lede">Es un programa chico hecho por un desarrollador independiente, sin firma digital paga — por eso Windows y macOS muestran una advertencia la primera vez. Acá te mostramos exactamente qué apretar.</p>
+    </div>
+  </section>
+
+  <section class="section" id="windows">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Windows · SmartScreen</span>
+        <h2>"Windows protegió su PC" — es normal, así se resuelve.</h2>
+        <p>Microsoft Defender SmartScreen marca así a cualquier aplicación nueva que no pagó una firma digital (cientos de dólares al año). No significa que el programa sea inseguro — solo que todavía no es "conocido" por Microsoft.</p>
+      </div>
+
+      <div class="demo-shell glass">
+        <div class="win-stage">
+          <div class="win-dialog">
+            <div class="win-titlebar"><span>Windows protegió su PC</span><span>✕</span></div>
+            <div class="win-body">
+              <div class="win-shield">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#0a5ac4" stroke-width="1.6"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>
+                <div>
+                  <div class="win-title">Windows protegió su PC</div>
+                  <div class="win-desc">Microsoft Defender SmartScreen impidió el inicio de una aplicación no reconocida. Ejecutar esta aplicación podría poner en riesgo su PC.</div>
+                  <div class="win-link">Más información</div>
+                  <div class="win-extra">
+                    <div class="win-appinfo">
+                      <div><b>Aplicación:</b> PixelClean_Setup.exe</div>
+                      <div><b>Editor:</b> Editor desconocido</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="win-btnrow">
+              <button class="win-btn">No ejecutar</button>
+              <button class="win-btn primary">Ejecutar de todas formas</button>
+            </div>
+          </div>
+          <svg class="cursor win-cursor-1" viewBox="0 0 24 24" fill="white" stroke="black" stroke-width="1"><path d="M4 2l14 8-6 2 4 6-3 2-4-6-4 4z"/></svg>
+          <svg class="cursor win-cursor-2" viewBox="0 0 24 24" fill="white" stroke="black" stroke-width="1"><path d="M4 2l14 8-6 2 4 6-3 2-4-6-4 4z"/></svg>
+        </div>
+      </div>
+
+      <ol class="steps-mini">
+        <li><span class="n">1</span><span>Descargás el instalador y le das doble click. Puede tardar un segundo en aparecer la ventana azul.</span></li>
+        <li><span class="n">2</span><span>Hacé click en <b>"Más información"</b> — un texto chico abajo del mensaje.</span></li>
+        <li><span class="n">3</span><span>Aparece un botón nuevo: <b>"Ejecutar de todas formas"</b>. Hacé click ahí.</span></li>
+        <li><span class="n">4</span><span>Windows te va a pedir permiso de administrador (UAC) — aceptalo, así se instala correctamente para todos los usuarios de la PC.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" id="mac">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">macOS · Gatekeeper</span>
+        <h2>En Mac el aviso es distinto, pero el motivo es el mismo.</h2>
+        <p>macOS bloquea apps que no pasaron por la notarización de Apple (una cuenta de desarrollador paga). Se resuelve con un click derecho en vez de uno normal.</p>
+      </div>
+
+      <div class="demo-shell glass">
+        <div class="mac-stage">
+          <div class="mac-dialog">
+            <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="white"/></svg></div>
+            <h4>"PixelClean" no se puede abrir porque es de un desarrollador no identificado</h4>
+            <p>macOS no puede verificar que esta app esté libre de malware.</p>
+            <div class="mac-btnrow">
+              <button class="mac-btn">Mover a la papelera</button>
+              <button class="mac-btn primary">Abrir</button>
+            </div>
+          </div>
+          <svg class="mac-cursor" viewBox="0 0 24 24" fill="white" stroke="black" stroke-width="1"><path d="M4 2l14 8-6 2 4 6-3 2-4-6-4 4z"/></svg>
+        </div>
+      </div>
+
+      <ol class="steps-mini">
+        <li><span class="n">1</span><span>En el Finder, hacé <b>click derecho (o Ctrl+click)</b> sobre PixelClean — no doble click.</span></li>
+        <li><span class="n">2</span><span>Elegí <b>"Abrir"</b> en el menú contextual.</span></li>
+        <li><span class="n">3</span><span>Va a aparecer el mismo aviso, pero esta vez con el botón <b>"Abrir"</b> disponible — confirmá.</span></li>
+        <li><span class="n">4</span><span>Solo hace falta hacerlo la primera vez; después abre normal con doble click.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" id="preguntas">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Dudas comunes</span>
+        <h2>¿Esto es seguro?</h2>
+      </div>
+      <div class="faq">
+        <details class="faq-item" open>
+          <summary>¿Por qué aparece esta advertencia si el programa es legítimo?</summary>
+          <p>Porque firmar digitalmente un ejecutable cuesta dinero por año (certificados de $70 a $400 USD según el proveedor), y hace falta acumular reputación con muchas descargas. Es un costo de entrada para desarrolladores independientes, no una señal de que el programa esté mal.</p>
+        </details>
+        <details class="faq-item">
+          <summary>¿PixelClean se conecta a internet o sube mis videos?</summary>
+          <p>Solo para chequear si hay una versión nueva (opcional, en segundo plano) y para validar tu clave Pro. Tus videos nunca salen de tu computadora.</p>
+        </details>
+        <details class="faq-item">
+          <summary>¿Puedo ver el código fuente antes de confiar?</summary>
+          <p>Sí, el proyecto es público en GitHub: <a href="https://github.com/PIXELCLEANPRO/PIXELCLEAN" target="_blank" rel="noopener" style="color:var(--signal)">github.com/PIXELCLEANPRO/PIXELCLEAN</a>.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-row">
+    <div class="brand"><svg width="18" height="18" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>PixelClean</div>
+    <nav class="foot-links">
+      <a href="index.html">Inicio</a>
+      <a href="como-usar.html">Cómo usar</a>
+      <a href="index.html#preguntas">Preguntas</a>
+    </nav>
+  </div>
+</footer>
