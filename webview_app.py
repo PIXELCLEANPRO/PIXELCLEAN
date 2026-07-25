@@ -61,6 +61,19 @@ RESOLUCIONES = {
 LICENCIA_HASH_PRO = "ab45d00dee70232649d49b004f952ecb6c0ae0a00663c15f5d7b4c2a3929d071"
 LIMITE_GRATIS_DIARIO = 5
 
+VERSION_APP = "1.0.0"
+URL_ULTIMA_VERSION = "https://api.github.com/repos/PIXELCLEANPRO/PIXELCLEAN/releases/latest"
+URL_PAGINA_DESCARGA = "https://pixelclean-app.netlify.app"
+
+
+def _version_a_tupla(texto):
+    limpio = (texto or "").strip().lstrip("vV")
+    partes = []
+    for trozo in limpio.split("."):
+        digitos = "".join(c for c in trozo if c.isdigit())
+        partes.append(int(digitos) if digitos else 0)
+    return tuple(partes) or (0,)
+
 
 def _carpeta_datos_app():
     if os.name == "nt":
@@ -110,6 +123,8 @@ class Api:
         self.progreso = {"completados": 0, "total": 0, "por_clip": [], "logs": [], "terminado": True}
         self._progreso_lock = threading.Lock()
         self._evento_cancelar = threading.Event()
+        self._actualizacion_lock = threading.Lock()
+        self._actualizacion = {"hay_actualizacion": False}
 
     def set_ventana(self, ventana):
         self._ventana = ventana
@@ -155,6 +170,34 @@ class Api:
                 json.dump({"hash": h}, f)
             return {"ok": True}
         return {"ok": False, "error": "Esa clave no es valida."}
+
+    # ---------- actualizaciones ----------
+    def obtener_estado_actualizacion(self):
+        """El frontend consulta esto (polling liviano); el chequeo real corre
+        en un hilo aparte al arrancar para no bloquear el inicio de la app."""
+        with self._actualizacion_lock:
+            return dict(self._actualizacion)
+
+    def _revisar_actualizacion_en_fondo(self):
+        import urllib.request
+        try:
+            req = urllib.request.Request(
+                URL_ULTIMA_VERSION,
+                headers={"Accept": "application/vnd.github+json", "User-Agent": "PixelClean"},
+            )
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                datos = json.loads(resp.read().decode("utf-8"))
+            version_remota = datos.get("tag_name", "")
+            if _version_a_tupla(version_remota) > _version_a_tupla(VERSION_APP):
+                with self._actualizacion_lock:
+                    self._actualizacion = {
+                        "hay_actualizacion": True,
+                        "version_actual": VERSION_APP,
+                        "version_nueva": version_remota,
+                        "url": datos.get("html_url") or URL_PAGINA_DESCARGA,
+                    }
+        except Exception:
+            pass  # sin internet o GitHub caido: no molestamos al usuario
 
     # ---------- paso clip ----------
     # Los dialogos nativos de Windows necesitan correr en el mismo hilo que
@@ -381,6 +424,7 @@ def main():
     # las coordenadas del mouse le llegan mal a la pagina (pintar en el lugar
     # equivocado). Se probo explicitamente y empeoraba las cosas.
     api = Api()
+    threading.Thread(target=api._revisar_actualizacion_en_fondo, daemon=True).start()
     puerto = _iniciar_servidor(api)
     ventana = webview.create_window(
         "PixelClean - Reparador de pixeles quemados",

@@ -67,13 +67,33 @@ const mockApi = {
   cancelar_procesamiento: async () => { if (mockApi._progreso) mockApi._progreso.terminado = true; return {ok: true}; },
   estado_licencia: async () => ({pro: false, restantes: 5, limite: 5}),
   activar_licencia: async () => ({ok: false, error: "Modo de prueba en navegador: no se puede validar una clave real aca."}),
+  obtener_estado_actualizacion: async () => ({hay_actualizacion: false}),
 };
 
 // nota: el flujo real consulta el progreso por fetch('/progreso') servido por el mismo
 // servidor Python (ver webview_app.py), no por api.obtener_progreso -- eso evita un pedido
 // entre origenes distintos que resulto poco confiable en pywebview+WinForms+WebView2.
 let api = (window.pywebview && window.pywebview.api) ? window.pywebview.api : mockApi;
-window.addEventListener("pywebviewready", () => { api = window.pywebview.api; refrescarPlanBadge(); });
+window.addEventListener("pywebviewready", () => { api = window.pywebview.api; refrescarPlanBadge(); revisarActualizacion(); });
+
+/* ---------------- Aviso de actualizacion disponible ---------------- */
+async function revisarActualizacion() {
+  try {
+    const estado = await api.obtener_estado_actualizacion();
+    if (estado && estado.hay_actualizacion) {
+      const banner = document.getElementById("bannerUpdate");
+      document.getElementById("updateVersion").textContent = estado.version_nueva;
+      document.getElementById("updateLink").href = estado.url;
+      banner.classList.add("visible");
+    }
+  } catch (err) {
+    // sin internet o api no disponible todavia: no molestamos
+  }
+}
+setTimeout(revisarActualizacion, 4000);
+document.getElementById("updateClose").addEventListener("click", () => {
+  document.getElementById("bannerUpdate").classList.remove("visible");
+});
 
 /* ---------------- Plan gratis / Pro ---------------- */
 async function refrescarPlanBadge() {
