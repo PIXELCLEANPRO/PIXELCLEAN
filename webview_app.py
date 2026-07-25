@@ -203,20 +203,29 @@ class Api:
                         "version_nueva": version_remota,
                         "url": datos.get("html_url") or URL_PAGINA_DESCARGA,
                         "descarga_url": descarga_url,
+                        "instalando": False,
                     }
+                # Se instala sola, sin que el usuario tenga que apretar nada -- salvo
+                # que haya un procesamiento en curso en ese momento, para no perder
+                # trabajo. Si esta procesando, se reintenta cuando termine el lote
+                # (ver el finally de _procesar_todo_worker).
+                if descarga_url:
+                    with self._progreso_lock:
+                        procesando = not self.progreso.get("terminado", True)
+                    if not procesando:
+                        self._descargar_e_instalar(descarga_url)
         except Exception:
             pass  # sin internet o GitHub caido: no molestamos al usuario
 
-    def instalar_actualizacion(self):
-        """Descarga el instalador nuevo y lo lanza; el instalador reemplaza
-        esta misma instalacion (mismo AppId => actualizacion in-place) y
-        vuelve a abrir la app solo. La licencia no se pierde porque vive en
-        %LOCALAPPDATA%\\PixelClean, fuera de la carpeta de instalacion."""
-        with self._actualizacion_lock:
-            descarga_url = self._actualizacion.get("descarga_url")
-        if not descarga_url:
-            return {"ok": False, "error": "No hay una URL de descarga disponible todavia."}
+    def _descargar_e_instalar(self, descarga_url):
+        """Descarga el instalador nuevo y lo lanza en modo silencioso; el
+        instalador reemplaza esta misma instalacion (mismo AppId => actualizacion
+        in-place) y vuelve a abrir la app solo. La licencia no se pierde porque
+        vive en %LOCALAPPDATA%\\PixelClean, fuera de la carpeta de instalacion."""
         try:
+            with self._actualizacion_lock:
+                self._actualizacion["instalando"] = True
+
             import urllib.request
             import tempfile
             ruta_temp = os.path.join(tempfile.gettempdir(), "PixelClean_Setup_actualizacion.exe")
@@ -228,11 +237,24 @@ class Api:
                 close_fds=True,
                 creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
             )
-
             threading.Thread(target=self._cerrar_para_actualizar, daemon=True).start()
-            return {"ok": True}
         except Exception as e:
-            return {"ok": False, "error": f"No se pudo descargar/lanzar el instalador: {e}"}
+            with self._actualizacion_lock:
+                self._actualizacion["instalando"] = False
+                self._actualizacion["error"] = str(e)
+
+    def instalar_actualizacion(self):
+        """Disparador manual (botón de la campanita): normalmente la
+        actualizacion ya se instalo sola en segundo plano, pero esto sirve
+        para forzarla de nuevo si quedo pendiente por un procesamiento activo."""
+        with self._actualizacion_lock:
+            descarga_url = self._actualizacion.get("descarga_url")
+            ya_instalando = self._actualizacion.get("instalando")
+        if not descarga_url:
+            return {"ok": False, "error": "No hay una URL de descarga disponible todavia."}
+        if not ya_instalando:
+            self._descargar_e_instalar(descarga_url)
+        return {"ok": True}
 
     def _cerrar_para_actualizar(self):
         import time
@@ -407,6 +429,15 @@ class Api:
         finally:
             with self._progreso_lock:
                 self.progreso["terminado"] = True
+            with self._actualizacion_lock:
+                pendiente = (
+                    self._actualizacion.get("hay_actualizacion")
+                    and self._actualizacion.get("descarga_url")
+                    and not self._actualizacion.get("instalando")
+                )
+                descarga_url = self._actualizacion.get("descarga_url")
+            if pendiente:
+                self._descargar_e_instalar(descarga_url)
 
 
 def _iniciar_servidor(api):

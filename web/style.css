@@ -91,6 +91,7 @@ body::before {
   -webkit-backdrop-filter: blur(22px) saturate(180%);
   backdrop-filter: blur(22px) saturate(180%);
   border-bottom: 1px solid var(--glass-border);
+  position: relative; z-index: 50;
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 17px; }
 .brand svg { color: var(--accent); }
