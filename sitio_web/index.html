@@ -226,6 +226,30 @@
   .price-card .btn { width: 100%; justify-content: center; }
   .paypal-btn-wrap { width: 100%; }
 
+  /* ---------- payment modal ---------- */
+  .pago-overlay {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(6, 7, 10, .55);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    opacity: 0; pointer-events: none; transition: opacity .22s ease;
+  }
+  .pago-overlay.open { opacity: 1; pointer-events: auto; }
+  .pago-modal {
+    width: 100%; max-width: 380px; border-radius: var(--r-lg); padding: 30px 28px 26px;
+    text-align: center; position: relative;
+    transform: translateY(10px) scale(.97); transition: transform .22s ease;
+  }
+  .pago-overlay.open .pago-modal { transform: translateY(0) scale(1); }
+  .pago-close {
+    position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%;
+    background: var(--panel-2); border: 1px solid var(--glass-border); color: var(--ink-soft); cursor: pointer;
+  }
+  .pago-close:hover { color: var(--ink); }
+  .pago-modal .eyebrow { justify-content: center; margin-bottom: 10px; }
+  .pago-modal h3 { font-size: 22px; margin-bottom: 10px; }
+  .pago-modal p { color: var(--ink-soft); font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+
   /* ---------- reveal ---------- */
   .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
   .reveal.is-visible { opacity: 1; transform: none; }
@@ -385,16 +409,40 @@
             <li>Sin límite diario de clips</li>
             <li>Procesamiento por lotes sin restricción</li>
           </ul>
-          <div id="paypal-container-DPBYFXST9DGP6" class="paypal-btn-wrap"></div>
-          <script>
-            if (window.paypal) {
-              paypal.HostedButtons({ hostedButtonId: "DPBYFXST9DGP6" }).render("#paypal-container-DPBYFXST9DGP6");
-            }
-          </script>
+          <button class="btn btn-primary" id="btnComprarPro">Comprar Pro</button>
         </div>
       </div>
     </div>
   </section>
+
+  <div class="pago-overlay" id="pagoOverlay">
+    <div class="pago-modal glass">
+      <button class="pago-close" id="pagoClose" aria-label="Cerrar">✕</button>
+      <span class="eyebrow">PixelClean Pro</span>
+      <h3>Pagar $70 USD</h3>
+      <p>Pago único, sin suscripción. Al confirmar en PayPal recibís la clave por email en poco tiempo.</p>
+      <div id="paypal-container-DPBYFXST9DGP6" class="paypal-btn-wrap"></div>
+    </div>
+  </div>
+
+  <script>
+    if (window.paypal) {
+      paypal.HostedButtons({ hostedButtonId: "DPBYFXST9DGP6" }).render("#paypal-container-DPBYFXST9DGP6");
+    }
+    var pagoOverlay = document.getElementById("pagoOverlay");
+    document.getElementById("btnComprarPro").addEventListener("click", function () {
+      pagoOverlay.classList.add("open");
+    });
+    document.getElementById("pagoClose").addEventListener("click", function () {
+      pagoOverlay.classList.remove("open");
+    });
+    pagoOverlay.addEventListener("click", function (e) {
+      if (e.target === pagoOverlay) pagoOverlay.classList.remove("open");
+    });
+    window.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") pagoOverlay.classList.remove("open");
+    });
+  </script>
 
   <section class="section" id="como-funciona">
     <div class="wrap">
