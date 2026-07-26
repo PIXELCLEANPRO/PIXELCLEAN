@@ -20,7 +20,7 @@ const state = {
   fitScale: {mascara: 1},
   history: [], historyIndex: -1,
   maskBaseSnapshot: null,
-  motor: "blur",
+  motor: "opencv",
   sigma: 15,
   calidad: "bitrate",
   velocidad: "Rapido",
@@ -51,7 +51,7 @@ const mockApi = {
       bitrate: "45.2 Mbps", peso: "742 MB", contenedor: "QuickTime / MOV", codec_audio: "AAC", audio_canales: 2, audio_sample_rate: "48 kHz"},
   }),
   render_preview: async (motorId, maskB64, sigma) => ({antes_b64: mockFrameDataUrl, despues_b64: mockFrameDataUrl}),
-  obtener_frame_en: async (ruta, segundo) => ({ok: true, frame_b64: mockFrameDataUrl}),
+  obtener_frame_en: async (ruta, segundo) => ({ok: true}),
   procesar_todo: async (payload) => {
     mockApi._progreso = {completados: 0, total: payload.clips.length, por_clip: payload.clips.map(() => 0), logs: [], terminado: false};
     let n = 0;
@@ -223,8 +223,8 @@ async function mostrarUpsellSiCorresponde() {
     if (estado && !estado.pro) {
       const usados = estado.limite - estado.restantes;
       const texto = estado.restantes > 0
-        ? `Ya usaste ${usados} de ${estado.limite} clips gratis hoy — te quedan ${estado.restantes}. Con el plan Pro no tenés límite diario, pago único de $70 USD.`
-        : `Usaste tus ${estado.limite} clips gratis de hoy. Con el plan Pro no tenés límite diario, pago único de $70 USD.`;
+        ? `Ya usaste ${usados} de ${estado.limite} clips gratis hoy — te quedan ${estado.restantes}. Con el plan Pro no tenés límite diario, pago único de $20 USD.`
+        : `Usaste tus ${estado.limite} clips gratis de hoy. Con el plan Pro no tenés límite diario, pago único de $20 USD.`;
       document.getElementById("upsellTexto").textContent = texto;
       document.getElementById("upsellOverlay").classList.add("open");
     }
@@ -269,7 +269,14 @@ function mostrarPaso(nuevo) {
   document.getElementById("btnSiguiente").textContent = nuevo === PASOS.length - 1 ? "Procesar" : "Siguiente";
   document.getElementById("navInfo").textContent = "";
   if (nuevo === 1) setTimeout(fitCanvasToViewport, 30);
+  else videoFrame.pause();
   if (nuevo === 2) actualizarPreview("motor");
+  if (nuevo === 3 && !_pollTimer) {
+    // recien se entra al paso, todavia no se apreto "Procesar": no mostrar
+    // el anillo de progreso (se veria como si ya estuviera renderizando).
+    document.getElementById("antesDeProcesar").style.display = "flex";
+    document.getElementById("estadoProcesando").style.display = "none";
+  }
 }
 
 document.getElementById("btnAtras").addEventListener("click", () => {
@@ -286,38 +293,55 @@ document.getElementById("btnSiguiente").addEventListener("click", () => {
 });
 
 /* ---------------- Paso 1: Clip ---------------- */
-async function establecerClips(archivos) {
-  if (!archivos || !archivos.length) return;
-  state.clips = archivos;
-  document.getElementById("lblClips").textContent = `${archivos.length} clip(s) cargado(s)`;
+function renderizarListaClips() {
+  document.getElementById("lblClips").textContent = state.clips.length ? `${state.clips.length} clip(s) cargado(s)` : "Ningun clip cargado";
   const list = document.getElementById("clipList");
   list.innerHTML = "";
-  archivos.forEach(ruta => {
+  state.clips.forEach((ruta, i) => {
     const row = document.createElement("div");
     row.className = "clip-row";
     const nombre = ruta.split(/[\\/]/).pop();
-    row.innerHTML = `<span class="name">${nombre}</span><div class="bar"><div style="width:0%"></div></div>`;
+    row.innerHTML = `<span class="name">${nombre}</span><div class="bar"><div style="width:0%"></div></div><button class="clip-remove" data-i="${i}" title="Quitar">&times;</button>`;
     list.appendChild(row);
   });
-  const datos = await api.obtener_frame_y_metadata(archivos[0]);
+  list.querySelectorAll(".clip-remove").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      quitarClip(Number(btn.dataset.i));
+    });
+  });
+}
+
+async function quitarClip(indice) {
+  state.clips.splice(indice, 1);
+  renderizarListaClips();
+  if (!state.clips.length) {
+    state.frameImg = null;
+    videoFrame.removeAttribute("src");
+    document.getElementById("brandBadge").querySelector("span").textContent = "Sin datos de camara";
+    document.getElementById("metaFields").innerHTML = "";
+    return;
+  }
+  const datos = await api.obtener_frame_y_metadata(state.clips[0]);
+  state.duracionSeg = datos.duracion_seg || 0;
   cargarFrameMuestra(datos);
   mostrarMetadata(datos.metadata);
+}
+
+async function establecerClips(archivos) {
+  if (!archivos || !archivos.length) return;
+  state.clips = archivos;
+  renderizarListaClips();
+  const datos = await api.obtener_frame_y_metadata(archivos[0]);
   state.duracionSeg = datos.duracion_seg || 0;
-  inicializarScrubVideo();
+  cargarFrameMuestra(datos);
+  mostrarMetadata(datos.metadata);
 }
 
 function formatoTiempo(seg) {
   seg = Math.max(0, Math.round(seg || 0));
   const m = Math.floor(seg / 60), s = seg % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
-
-function inicializarScrubVideo() {
-  const slider = document.getElementById("sliderTiempo");
-  const dur = state.duracionSeg || 0;
-  slider.max = dur > 0 ? dur.toFixed(1) : 100;
-  slider.value = dur > 0 ? (dur / 2).toFixed(1) : 0;
-  document.getElementById("lblTiempo").textContent = `${formatoTiempo(dur / 2)} / ${formatoTiempo(dur)}`;
 }
 
 document.getElementById("btnCargarClips").addEventListener("click", async () => {
@@ -331,23 +355,20 @@ document.getElementById("btnCargarClips").addEventListener("click", async () => 
   }
 });
 
-const EXTENSIONES_VIDEO = [".mp4", ".mov", ".mxf", ".avi", ".m4v", ".mkv"];
+// El navegador nunca expone la ruta real de un archivo soltado (por seguridad),
+// asi que la extraccion de rutas no se hace aca: Python la intercepta via el
+// bridge nativo de pywebview (window.dom, ver webview_app.py) y llama a
+// window.agregarClipsDesdeDrop con las rutas ya resueltas. Aca solo se maneja
+// el feedback visual de "estas arrastrando algo arriba".
 const zonaClip = document.querySelector(".panel-clip");
-zonaClip.addEventListener("dragenter", (e) => { e.preventDefault(); zonaClip.classList.add("dragover"); });
-zonaClip.addEventListener("dragover", (e) => { e.preventDefault(); zonaClip.classList.add("dragover"); });
-zonaClip.addEventListener("dragleave", () => zonaClip.classList.remove("dragover"));
-zonaClip.addEventListener("drop", (e) => {
-  e.preventDefault();
-  zonaClip.classList.remove("dragover");
-  const archivos = [...e.dataTransfer.files]
-    .map((f) => f.pywebviewFullPath || f.path)
-    .filter((p) => p && EXTENSIONES_VIDEO.some((ext) => p.toLowerCase().endsWith(ext)));
-  if (archivos.length) {
-    establecerClips(archivos);
-  } else {
-    document.getElementById("lblClips").textContent = "No se pudo leer la ruta del archivo soltado -- proba con el boton";
-  }
-});
+document.addEventListener("dragenter", (e) => { e.preventDefault(); zonaClip.classList.add("dragover"); });
+document.addEventListener("dragover", (e) => { e.preventDefault(); zonaClip.classList.add("dragover"); });
+document.addEventListener("dragleave", (e) => { if (!e.relatedTarget) zonaClip.classList.remove("dragover"); });
+document.addEventListener("drop", (e) => { e.preventDefault(); zonaClip.classList.remove("dragover"); });
+
+window.agregarClipsDesdeDrop = function (rutas) {
+  if (rutas && rutas.length) establecerClips(rutas);
+};
 
 function mostrarMetadata(meta) {
   const badge = document.getElementById("brandBadge");
@@ -383,10 +404,9 @@ function mostrarMetadata(meta) {
   if (!huboAlgo) fields.innerHTML = `<div class="meta-field"><span class="k">El archivo no trae datos tecnicos embebidos.</span></div>`;
 }
 
-/* ---------------- Editor de mascara: canvas, pincel, zoom, pan, historial ---------------- */
-const cnvFrame = document.getElementById("cnvFrame");
+/* ---------------- Editor de mascara: video real + canvas de mascara, pincel, zoom, pan, historial ---------------- */
+const videoFrame = document.getElementById("videoFrame");
 const cnvMask = document.getElementById("cnvMask");
-const ctxFrame = cnvFrame.getContext("2d");
 const ctxMask = cnvMask.getContext("2d");
 const viewport = document.getElementById("viewportMascara");
 const stage = document.getElementById("stageMascara");
@@ -394,17 +414,49 @@ const brushCursor = document.getElementById("brushCursor");
 
 function cargarFrameMuestra(datos) {
   state.frameW = datos.ancho; state.frameH = datos.alto;
-  const img = new Image();
-  img.onload = () => {
-    state.frameImg = img;
-    [cnvFrame, cnvMask].forEach(c => { c.width = state.frameW; c.height = state.frameH; });
-    ctxFrame.drawImage(img, 0, 0);
-    ctxMask.clearRect(0, 0, state.frameW, state.frameH);
-    pushHistory();
-    fitCanvasToViewport();
-  };
-  img.src = datos.frame_b64;
+  state.frameImg = true;
+  cnvMask.width = state.frameW; cnvMask.height = state.frameH;
+  ctxMask.clearRect(0, 0, state.frameW, state.frameH);
+  videoFrame.pause();
+  videoFrame.src = `/clip_video?path=${encodeURIComponent(state.clips[0])}`;
+  videoFrame.load();
+  pushHistory();
+  fitCanvasToViewport();
 }
+
+// El scrubber real: seek nativo del <video> (instantaneo, nada de ida y vuelta
+// a Python por cada movimiento -- eso era lo que hacia lento al scrubber viejo).
+// Al reproducir, el canvas de mascara queda arriba en su propia capa, asi que
+// se puede pintar con el video corriendo.
+videoFrame.addEventListener("loadedmetadata", () => {
+  const slider = document.getElementById("sliderTiempo");
+  const dur = videoFrame.duration || 0;
+  slider.max = dur || 100;
+  if (dur) videoFrame.currentTime = Math.min(state.duracionSeg ? state.duracionSeg / 2 : dur / 2, dur - 0.05);
+});
+videoFrame.addEventListener("timeupdate", () => {
+  document.getElementById("sliderTiempo").value = videoFrame.currentTime;
+  document.getElementById("lblTiempo").textContent = `${formatoTiempo(videoFrame.currentTime)} / ${formatoTiempo(videoFrame.duration)}`;
+});
+document.getElementById("sliderTiempo").addEventListener("input", (e) => {
+  videoFrame.currentTime = parseFloat(e.target.value);
+});
+document.getElementById("btnPlayPause").addEventListener("click", () => {
+  if (videoFrame.paused) videoFrame.play(); else videoFrame.pause();
+});
+videoFrame.addEventListener("play", () => { document.getElementById("iconPlayPause").innerHTML = '<use href="#i-pause"/>'; });
+videoFrame.addEventListener("pause", () => { document.getElementById("iconPlayPause").innerHTML = '<use href="#i-play"/>'; });
+// El seek en si es instantaneo (nativo del navegador). Cuando el usuario se
+// asienta en una posicion (evento "seeked", no en cada frame del arrastre),
+// se le avisa a Python en segundo plano para que el cuadro de referencia de
+// los paneles "antes/despues en vivo" tambien quede sincronizado -- sin
+// bloquear ni frenar el scrubbing visual.
+videoFrame.addEventListener("seeked", () => {
+  if (!api.obtener_frame_en || !state.clips.length) return;
+  api.obtener_frame_en(state.clips[0], videoFrame.currentTime)
+    .then(() => actualizarPreview("mascara"))
+    .catch(() => {});
+});
 
 function fitCanvasToViewport() {
   if (!state.frameImg) return;
@@ -425,7 +477,7 @@ function aplicarTransformEscenario() {
   const dispW = state.frameW * escala, dispH = state.frameH * escala;
   const left = (vw - dispW) / 2 + state.pan.mascara.x;
   const top = (vh - dispH) / 2 + state.pan.mascara.y;
-  [cnvFrame, cnvMask].forEach(c => {
+  [videoFrame, cnvMask].forEach(c => {
     c.style.width = dispW + "px";
     c.style.height = dispH + "px";
     c.style.left = left + "px";
@@ -434,18 +486,40 @@ function aplicarTransformEscenario() {
   document.getElementById("zoomPct").textContent = Math.round(state.zoom.mascara * 100) + "%";
 }
 
-function cambiarZoom(delta) {
+// Zoom centrado en el cursor (estilo Photoshop): el punto de la imagen que
+// esta bajo el mouse se mantiene fijo en pantalla antes y despues del zoom,
+// en vez de siempre zoomear desde el centro del visor.
+function cambiarZoom(delta, clientX, clientY) {
+  const vw = viewport.clientWidth, vh = viewport.clientHeight;
+  const rect = viewport.getBoundingClientRect();
+  const cursorX = (clientX != null) ? clientX - rect.left : vw / 2;
+  const cursorY = (clientY != null) ? clientY - rect.top : vh / 2;
+
+  const escalaVieja = state.fitScale.mascara * state.zoom.mascara;
+  const dispWVieja = state.frameW * escalaVieja, dispHVieja = state.frameH * escalaVieja;
+  const leftViejo = (vw - dispWVieja) / 2 + state.pan.mascara.x;
+  const topViejo = (vh - dispHVieja) / 2 + state.pan.mascara.y;
+  const imgX = (cursorX - leftViejo) / escalaVieja;
+  const imgY = (cursorY - topViejo) / escalaVieja;
+
   state.zoom.mascara = Math.max(0.3, Math.min(6, state.zoom.mascara + delta));
+
+  const escalaNueva = state.fitScale.mascara * state.zoom.mascara;
+  const dispWNueva = state.frameW * escalaNueva, dispHNueva = state.frameH * escalaNueva;
+  state.pan.mascara.x = cursorX - (vw - dispWNueva) / 2 - imgX * escalaNueva;
+  state.pan.mascara.y = cursorY - (vh - dispHNueva) / 2 - imgY * escalaNueva;
+
   aplicarTransformEscenario();
 }
 document.getElementById("btnZoomIn").addEventListener("click", () => cambiarZoom(0.2));
 document.getElementById("btnZoomOut").addEventListener("click", () => cambiarZoom(-0.2));
 document.getElementById("hudZoomIn").addEventListener("click", () => cambiarZoom(0.2));
 document.getElementById("hudZoomOut").addEventListener("click", () => cambiarZoom(-0.2));
+document.getElementById("hudZoomFit").addEventListener("click", () => fitCanvasToViewport());
 
 viewport.addEventListener("wheel", (e) => {
   e.preventDefault();
-  cambiarZoom(e.deltaY < 0 ? 0.15 : -0.15);
+  cambiarZoom(e.deltaY < 0 ? 0.15 : -0.15, e.clientX, e.clientY);
 }, {passive: false});
 
 /* --- herramientas --- */
@@ -479,7 +553,13 @@ viewport.addEventListener("mousemove", (e) => {
     const dx = e.clientX - state.resizeStart.x, dy = e.clientY - state.resizeStart.y;
     setBrushSize(state.resizeStart.size + dx * 0.4);
     setHardness(state.resizeStart.hardness - dy * 0.5);
-    const diametro = state.brushSize * 2;
+    // el diametro se muestra en pixeles de pantalla, pero brushSize esta en
+    // coordenadas de imagen -- hay que escalarlo igual que el cursor normal
+    // (mas abajo), si no el circulo que se ve mientras arrastras no coincide
+    // con el que aparece despues de soltar el mouse.
+    const rectCursor = cnvMask.getBoundingClientRect();
+    const escala = state.frameW ? (rectCursor.width / state.frameW) : 1;
+    const diametro = state.brushSize * 2 * escala;
     brushCursor.style.width = diametro + "px";
     brushCursor.style.height = diametro + "px";
     brushCursor.style.left = (state.resizeStart.x - diametro / 2) + "px";
@@ -513,10 +593,13 @@ viewport.addEventListener("mousedown", (e) => {
     e.preventDefault();
     state.isResizingBrush = true;
     state.resizeStart = {x: e.clientX, y: e.clientY, size: state.brushSize, hardness: state.hardness};
+    const rectCursor0 = cnvMask.getBoundingClientRect();
+    const escala0 = state.frameW ? (rectCursor0.width / state.frameW) : 1;
+    const diametro0 = state.brushSize * 2 * escala0;
     brushCursor.style.display = "block";
-    brushCursor.style.left = (e.clientX - state.brushSize) + "px";
-    brushCursor.style.top = (e.clientY - state.brushSize) + "px";
-    brushCursor.style.width = brushCursor.style.height = (state.brushSize * 2) + "px";
+    brushCursor.style.left = (e.clientX - diametro0 / 2) + "px";
+    brushCursor.style.top = (e.clientY - diametro0 / 2) + "px";
+    brushCursor.style.width = brushCursor.style.height = diametro0 + "px";
     return;
   }
   if (state.tool === "hand") {
@@ -806,37 +889,49 @@ document.getElementById("btnCargarPerfil").addEventListener("click", async () =>
   msg.textContent = `Perfil "${nombre}" aplicado.`;
 });
 
-/* ---------------- Buscar cuadro del video (scrubber, de prueba) ---------------- */
-function actualizarFrameCanvas(dataUrl) {
-  const img = new Image();
-  img.onload = () => { ctxFrame.clearRect(0, 0, cnvFrame.width, cnvFrame.height); ctxFrame.drawImage(img, 0, 0, cnvFrame.width, cnvFrame.height); state.frameImg = img; };
-  img.src = dataUrl;
+/* ---------------- Resaltar (brillo/contraste/saturacion) ---------------- */
+// El panel se reubica como hijo directo de <body> con position:fixed la
+// primera vez que se abre. Asi evita quedar atrapado en el "contexto de
+// apilado" que crea el panel del paso (que anima opacity/transform al
+// entrar) y cualquier otro elemento (como el video) que compita por encima
+// -- position:fixed + hijo de body es lo mas arriba que se puede estar.
+const realcePop = document.getElementById("realcePop");
+const btnRealce = document.getElementById("btnRealce");
+document.body.appendChild(realcePop);
+realcePop.style.position = "fixed";
+realcePop.style.zIndex = "99999";
+
+function posicionarRealcePop() {
+  const r = btnRealce.getBoundingClientRect();
+  realcePop.style.left = (r.right + 10) + "px";
+  realcePop.style.top = r.top + "px";
 }
 
-let _scrubDebounce = null;
-document.getElementById("sliderTiempo").addEventListener("input", (e) => {
-  const seg = parseFloat(e.target.value);
-  document.getElementById("lblTiempo").textContent = `${formatoTiempo(seg)} / ${formatoTiempo(state.duracionSeg)}`;
-  clearTimeout(_scrubDebounce);
-  _scrubDebounce = setTimeout(async () => {
-    if (!state.clips.length || !api.obtener_frame_en) return;
-    const resultado = await api.obtener_frame_en(state.clips[0], seg).catch(() => null);
-    if (resultado && resultado.ok) actualizarFrameCanvas(resultado.frame_b64);
-  }, 180);
+btnRealce.addEventListener("click", (e) => {
+  e.stopPropagation();
+  posicionarRealcePop();
+  realcePop.classList.toggle("open");
+});
+document.addEventListener("click", (e) => {
+  if (realcePop.classList.contains("open") && !realcePop.contains(e.target) && e.target !== btnRealce) {
+    realcePop.classList.remove("open");
+  }
 });
 
-/* ---------------- Resaltar contraste/saturacion (solo visual, de prueba) ---------------- */
 function aplicarRealce() {
+  const b = document.getElementById("sliderBrillo").value;
   const c = document.getElementById("sliderContraste").value;
   const s = document.getElementById("sliderSaturacion").value;
-  cnvFrame.style.filter = `contrast(${c}%) saturate(${s}%)`;
+  videoFrame.style.filter = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
 }
+document.getElementById("sliderBrillo").addEventListener("input", aplicarRealce);
 document.getElementById("sliderContraste").addEventListener("input", aplicarRealce);
 document.getElementById("sliderSaturacion").addEventListener("input", aplicarRealce);
 document.getElementById("btnResetRealce").addEventListener("click", () => {
+  document.getElementById("sliderBrillo").value = 100;
   document.getElementById("sliderContraste").value = 100;
   document.getElementById("sliderSaturacion").value = 100;
-  cnvFrame.style.filter = "none";
+  videoFrame.style.filter = "none";
 });
 
 document.getElementById("btnBorrarPerfil").addEventListener("click", async () => {
@@ -871,7 +966,6 @@ function habilitarResizer(resizerEl, panelEl, {min = 220, max = 1400} = {}) {
     if (arrastrando) { arrastrando = false; resizerEl.classList.remove("dragging"); document.body.style.userSelect = ""; }
   });
 }
-habilitarResizer(document.getElementById("resizerMascara"), document.getElementById("previewColMascara"));
 habilitarResizer(document.getElementById("resizerMotor"), document.getElementById("previewColMotor"));
 
 /* ---------------- Paneles de vista previa (Antes/Despues) reutilizables ---------------- */
@@ -982,10 +1076,6 @@ function expandirPreview(canvasId, titulo) {
   document.body.appendChild(overlay);
 }
 
-const panelAntesMascara = crearPanelPreview("Antes (en vivo)", "cnvAntesMascara");
-const panelDespuesMascara = crearPanelPreview("Despues (en vivo)", "cnvDespuesMascara");
-document.getElementById("previewColMascara").append(panelAntesMascara, panelDespuesMascara);
-
 const panelAntesMotor = crearPanelPreview("Antes (en vivo)", "cnvAntesMotor");
 const panelDespuesMotor = crearPanelPreview("Despues (en vivo)", "cnvDespuesMotor");
 document.getElementById("previewColMotor").append(panelAntesMotor, panelDespuesMotor);
@@ -995,17 +1085,13 @@ function debounceActualizarPreview(contexto) {
   state.debounceTimer = setTimeout(() => actualizarPreview(contexto), 160);
 }
 async function actualizarPreview(contexto) {
+  if (contexto === "mascara") return; // el paso Mascara ya no tiene paneles antes/despues al costado (sacados a pedido)
   if (!state.frameImg || !hayMascara()) return;
   const maskB64 = cnvMask.toDataURL();
   const resultado = await api.render_preview(state.motor, maskB64, state.sigma);
   if (!resultado) return;
-  if (contexto === "mascara") {
-    pintarImagenEnCanvas("cnvAntesMascara", resultado.antes_b64);
-    pintarImagenEnCanvas("cnvDespuesMascara", resultado.despues_b64);
-  } else {
-    pintarImagenEnCanvas("cnvAntesMotor", resultado.antes_b64);
-    pintarImagenEnCanvas("cnvDespuesMotor", resultado.despues_b64);
-  }
+  pintarImagenEnCanvas("cnvAntesMotor", resultado.antes_b64);
+  pintarImagenEnCanvas("cnvDespuesMotor", resultado.despues_b64);
 }
 
 /* ---------------- Paso 3: Motor y calidad ---------------- */
@@ -1050,11 +1136,13 @@ function actualizarProgresoClip(index, frac) {
 
 let _pollTimer = null;
 let _logsMostrados = 0;
+let _seEstaCancelando = false;
 
 document.getElementById("btnCancelar").addEventListener("click", () => {
   const btnCancelar = document.getElementById("btnCancelar");
   btnCancelar.disabled = true;
   btnCancelar.textContent = "Cancelando...";
+  _seEstaCancelando = true;
   api.cancelar_procesamiento().catch(() => {});
 });
 
@@ -1075,7 +1163,10 @@ async function procesarTodo() {
     return;
   }
 
+  _seEstaCancelando = false;
   btn.disabled = true;
+  document.getElementById("antesDeProcesar").style.display = "none";
+  document.getElementById("estadoProcesando").style.display = "flex";
   btnCancelar.style.display = "inline-flex";
   btnCancelar.disabled = false;
   btnCancelar.textContent = "Cancelar";
@@ -1087,6 +1178,7 @@ async function procesarTodo() {
   document.querySelectorAll("#clipList .clip-row .bar > div").forEach((b) => { b.style.width = "0%"; });
   const imgPreviewRender = document.getElementById("previewRenderImg");
   imgPreviewRender.style.display = "none";
+  document.getElementById("previewRenderPlaceholder").style.display = "block";
 
   const payload = {
     mascara_b64: cnvMask.toDataURL(),
@@ -1138,6 +1230,7 @@ async function procesarTodo() {
         if (prev.preview_b64) {
           imgPreviewRender.src = prev.preview_b64;
           imgPreviewRender.style.display = "block";
+          document.getElementById("previewRenderPlaceholder").style.display = "none";
         }
       } catch (err) { /* la preview es cosmetica, se ignora si falla */ }
     }
@@ -1148,10 +1241,29 @@ async function procesarTodo() {
       btnCancelar.style.display = "none";
       document.querySelector(".ring-wrap").classList.remove("procesando");
       imgPreviewRender.style.display = "none";
+      document.getElementById("previewRenderPlaceholder").textContent = "Listo.";
+      document.getElementById("previewRenderPlaceholder").style.display = "block";
       refrescarPlanBadge();
       mostrarUpsellSiCorresponde();
+      if (_seEstaCancelando) {
+        _seEstaCancelando = false;
+        resetearPasoProcesar();
+        mostrarPaso(2);
+      }
     }
   }, 500);
+}
+
+function resetearPasoProcesar() {
+  document.getElementById("antesDeProcesar").style.display = "flex";
+  document.getElementById("estadoProcesando").style.display = "none";
+  document.getElementById("logBox").innerHTML = "";
+  _logsMostrados = 0;
+  setAnillo(0);
+  document.querySelectorAll("#clipList .clip-row .bar > div").forEach((b) => { b.style.width = "0%"; });
+  imgPreviewRender.style.display = "none";
+  document.getElementById("previewRenderPlaceholder").textContent = "Se va a ir viendo aca, en baja calidad, mientras se procesa.";
+  document.getElementById("previewRenderPlaceholder").style.display = "block";
 }
 
 /* ---------------- Atajos de teclado estilo Photoshop (activos en el paso Mascara) ---------------- */
