@@ -368,7 +368,7 @@
       <a href="#preguntas">Preguntas</a>
     </nav>
     <div class="nav-cta">
-      <button class="btn btn-primary js-abrir-descarga">Descargar gratis</button>
+      <a class="btn btn-primary" href="instalacion.html">Descargar</a>
     </div>
   </div>
 </header>
@@ -382,7 +382,7 @@
         <p class="lede">PixelClean detecta y elimina píxeles quemados o muertos del sensor en todos tus videos, a partir de una sola referencia. Marcás el defecto una única vez y la app repara automáticamente cada cuadro del clip, sin subir un solo archivo a internet.</p>
         <p class="hero-highlight">Marcás el defecto una sola vez. Se corrige solo, en todos los cuadros del video.</p>
         <div class="ctas">
-          <button class="btn btn-primary js-abrir-descarga">Descargar gratis</button>
+          <a class="btn btn-primary" href="instalacion.html">Descargar</a>
         </div>
         <div class="fine">
           <svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg>
@@ -403,7 +403,7 @@
             <li>Máscara con pincel completo</li>
             <li>Metadata de cámara y vista previa en vivo</li>
           </ul>
-          <button class="btn btn-ghost js-abrir-descarga">Descargar gratis</button>
+          <a class="btn btn-ghost" href="instalacion.html">Descargar</a>
         </div>
         <div class="price-card price-pro glass">
           <div class="price-top">
@@ -422,19 +422,6 @@
       </div>
     </div>
   </section>
-
-  <div class="pago-overlay" id="descargaOverlay">
-    <div class="pago-modal glass">
-      <button class="pago-close" id="descargaClose" aria-label="Cerrar">✕</button>
-      <span class="eyebrow">Version gratis</span>
-      <h3>Elegí cómo descargarlo</h3>
-      <p>Hasta 5 clips por día, todas las funciones incluidas.</p>
-      <div class="row">
-        <a class="btn btn-primary" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.5/PixelClean_Setup.exe" download>Windows (.exe)</a>
-        <a class="btn btn-ghost" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/download/v1.1/PixelClean_Mac.dmg" download>macOS (.dmg)</a>
-      </div>
-    </div>
-  </div>
 
   <div class="pago-overlay" id="pagoOverlay">
     <div class="pago-modal glass">
@@ -722,7 +709,7 @@
       <div class="cta-band glass reveal">
         <h2>Un píxel quemado no debería arruinar la toma.</h2>
         <div class="ctas">
-          <button class="btn btn-primary js-abrir-descarga">Descargar gratis</button>
+          <a class="btn btn-primary" href="instalacion.html">Descargar</a>
         </div>
       </div>
     </div>
@@ -831,20 +818,5 @@
   box.addEventListener("pointerdown", function (e) { dragging = true; setSplit(fromEvent(e)); });
   window.addEventListener("pointermove", function (e) { if (dragging) setSplit(fromEvent(e)); });
   window.addEventListener("pointerup", function () { dragging = false; });
-
-  /* ---- popup de descarga (gratis) ---- */
-  var descargaOverlay = document.getElementById("descargaOverlay");
-  document.querySelectorAll(".js-abrir-descarga").forEach(function (btn) {
-    btn.addEventListener("click", function () { descargaOverlay.classList.add("open"); });
-  });
-  document.getElementById("descargaClose").addEventListener("click", function () {
-    descargaOverlay.classList.remove("open");
-  });
-  descargaOverlay.addEventListener("click", function (e) {
-    if (e.target === descargaOverlay) descargaOverlay.classList.remove("open");
-  });
-  window.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") descargaOverlay.classList.remove("open");
-  });
 })();
 </script>
