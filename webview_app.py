@@ -765,7 +765,7 @@ def main():
     # las coordenadas del mouse le llegan mal a la pagina (pintar en el lugar
     # equivocado). Se probo explicitamente y empeoraba las cosas.
     api = Api()
-    # threading.Thread(target=api._revisar_actualizacion_en_fondo, daemon=True).start()  # desactivado para demo local
+    threading.Thread(target=api._revisar_actualizacion_en_fondo, daemon=True).start()
     puerto = _iniciar_servidor(api)
     ventana = webview.create_window(
         "PixelClean - Reparador de pixeles quemados",
