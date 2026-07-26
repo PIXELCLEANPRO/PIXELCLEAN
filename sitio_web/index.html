@@ -202,7 +202,12 @@
 
   .hero h1 { font-size: clamp(38px, 5.4vw, 66px); line-height: 1.05; margin: 16px 0 22px; }
   .hero h1 em { font-style: normal; background: linear-gradient(120deg, var(--signal), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .hero .lede { font-size: 19px; color: var(--ink-soft); max-width: 46ch; margin-bottom: 30px; }
+  .hero .lede { font-size: 19px; color: var(--ink-soft); max-width: 46ch; margin-bottom: 18px; }
+  .hero-highlight {
+    display: inline-block; font-family: var(--font-display); font-weight: 650; font-size: 15.5px;
+    color: var(--ink); background: var(--panel-2); border: 1px solid var(--glass-border);
+    border-radius: 999px; padding: 9px 18px; margin-bottom: 26px; max-width: 46ch;
+  }
   .hero .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
   .hero .fine {
     font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint);
@@ -374,7 +379,8 @@
       <div>
         <span class="eyebrow">Reparación de sensor · 100% local</span>
         <h1>Un <em>punto quemado</em> no debería costarte la toma.</h1>
-        <p class="lede">PixelClean marca el píxel quemado o muerto de tu sensor a partir de una sola foto, y repara automáticamente cada cuadro del clip con ffmpeg — sin subir un solo archivo a internet.</p>
+        <p class="lede">PixelClean detecta y elimina píxeles quemados o muertos del sensor en todos tus videos, a partir de una sola referencia. Marcás el defecto una única vez y la app repara automáticamente cada cuadro del clip, sin subir un solo archivo a internet.</p>
+        <p class="hero-highlight">Marcás el defecto una sola vez. Se corrige solo, en todos los cuadros del video.</p>
         <div class="ctas">
           <button class="btn btn-primary js-abrir-descarga">Descargar gratis</button>
         </div>
@@ -475,12 +481,54 @@
     });
   </script>
 
+  <section class="section" id="cuando-sirve">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">¿Es para vos?</span>
+        <h2>¿Cuándo sirve PixelClean?</h2>
+        <p>Si tu situación es alguna de estas, es exactamente para lo que se hizo.</p>
+      </div>
+      <div class="features reveal">
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></div>
+          <h3>Sensor con píxeles calientes</h3>
+          <p>El clásico punto brillante que aparece siempre en el mismo lugar, sobre todo en tomas largas o de noche.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
+          <h3>Sensor con píxeles muertos</h3>
+          <p>Un punto negro o sin señal que quedó fijo después de un golpe, una caída o simple desgaste.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5z"/></svg></div>
+          <h3>Sensor dañado por láser</h3>
+          <p>Luces de escenario, proyectores o punteros láser que queman un punto exacto del sensor.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2s7 8.5 7 13a7 7 0 0 1-14 0c0-4.5 7-13 7-13z"/></svg></div>
+          <h3>Grabaciones nocturnas</h3>
+          <p>A mayor ISO, los hot pixels se notan más — y en video, se ven en cada uno de los cuadros.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></div>
+          <h3>El mismo punto, en todo el video</h3>
+          <p>Si el defecto aparece siempre en la misma posición del cuadro, una sola máscara lo corrige en todos los fotogramas.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+          <h3>Material que no se puede repetir</h3>
+          <p>Una toma única, un evento que ya pasó — cuando volver a filmar no es una opción.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="section" id="como-funciona">
     <div class="wrap">
       <div class="section-head reveal">
         <span class="eyebrow">El asistente</span>
-        <h2>Cuatro pasos, en ese orden, y listo.</h2>
-        <p>El mismo flujo que ves al abrir la app: elegís el clip, marcás el defecto una sola vez, elegís el motor de reparación, y procesás todo el lote.</p>
+        <h2>Marcás una vez. Se corrige en todos los cuadros.</h2>
+        <p>Nada de retocar fotograma por fotograma: el mismo flujo que ves al abrir la app son cuatro pasos — elegís el clip, marcás el defecto una sola vez, elegís el motor de reparación, y procesás todo el lote.</p>
       </div>
       <div class="steps reveal">
         <div class="step glass">
@@ -505,7 +553,7 @@
           <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
           <div class="n">04 · Procesar</div>
           <h3>Repara todo el lote</h3>
-          <p>Aplica la máscara a cada cuadro del clip con ffmpeg. Podés cancelar en cualquier momento sin dejar archivos a medio hacer.</p>
+          <p>Aplica la máscara a cada cuadro del clip, automáticamente. Podés cancelar en cualquier momento sin dejar archivos a medio hacer.</p>
         </div>
       </div>
     </div>
@@ -522,7 +570,7 @@
         <div class="engine glass">
           <span class="tag">motor · blur</span>
           <h3>Desenfoque gaussiano</h3>
-          <p>Mezcla el área marcada con una versión suavizada del mismo cuadro. Es el motor más rápido: ideal para revisar el lote entero antes de una pasada final.</p>
+          <p>La opción más rápida para eliminar el defecto en zonas uniformes (cielo, pared, fondo desenfocado) o para hacer una primera pasada de revisión de todo el lote.</p>
           <div class="bar-row"><span>Velocidad</span></div>
           <div class="bar"><i style="width:92%"></i></div>
           <div class="bar-row" style="margin-top:12px"><span>Precisión de textura</span></div>
@@ -531,7 +579,7 @@
         <div class="engine glass">
           <span class="tag">motor · opencv inpaint</span>
           <h3>Reconstrucción por inpainting</h3>
-          <p>Reconstruye la zona dañada a partir de la textura de los píxeles vecinos (algoritmo Telea). Más lento, pero indistinguible en fondos con detalle.</p>
+          <p>Reconstruye la textura usando la información de los píxeles vecinos (algoritmo Telea). Ideal cuando el defecto cae sobre detalle, bordes o texturas complejas.</p>
           <div class="bar-row"><span>Velocidad</span></div>
           <div class="bar"><i style="width:48%"></i></div>
           <div class="bar-row" style="margin-top:12px"><span>Precisión de textura</span></div>
@@ -575,34 +623,9 @@
       </div>
       <div class="features reveal">
         <div class="feature glass">
-          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></div>
-          <h3>Pincel con tamaño, dureza y opacidad</h3>
-          <p>Igual que en un editor de fotos: ajustá cada parámetro con campos numéricos arrastrables o atajos de teclado.</p>
-        </div>
-        <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
           <h3>Vista previa antes/después en vivo</h3>
           <p>Vas viendo el resultado del motor elegido mientras pintás, antes de procesar un solo cuadro real.</p>
-        </div>
-        <div class="feature glass">
-          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15V6a2 2 0 00-2-2H5a2 2 0 00-2 2v9m18 0H3m18 0l-2.5 5h-13L3 15"/></svg></div>
-          <h3>Arrastrar y soltar clips</h3>
-          <p>Soltá los archivos directo sobre la ventana. También podés elegirlos desde el explorador de siempre.</p>
-        </div>
-        <div class="feature glass">
-          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="15" height="12" rx="2"/><path d="M18 10l4-2v8l-4-2"/></svg></div>
-          <h3>Datos del archivo, siempre a la vista</h3>
-          <p>Duración, resolución, fotogramas por segundo y formato, reales y verificados — más ISO, lente o perfil de color cuando tu cámara los grabó en el archivo.</p>
-        </div>
-        <div class="feature glass">
-          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div>
-          <h3>Cancelar cuando quieras</h3>
-          <p>Parás el procesamiento en cualquier punto del lote; los archivos parciales se limpian solos.</p>
-        </div>
-        <div class="feature glass">
-          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg></div>
-          <h3>Modo claro y oscuro</h3>
-          <p>La interfaz arranca en oscuro por defecto y cambia al instante, para editar sin cansar la vista.</p>
         </div>
         <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></div>
@@ -610,20 +633,55 @@
           <p>Una sola máscara se aplica a todos los clips que tengan el mismo defecto de sensor, uno detrás del otro.</p>
         </div>
         <div class="feature glass">
-          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0z"/><path d="M12 7v5l3 3"/></svg></div>
-          <h3>Corre sobre ffmpeg</h3>
-          <p>Motor de video estándar de la industria, embebido en el instalador — no hace falta instalar nada aparte.</p>
-        </div>
-        <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg></div>
           <h3>100% local</h3>
           <p>Tus clips nunca salen de tu computadora: no hay subida, ni cuenta, ni servidor de por medio.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="15" height="12" rx="2"/><path d="M18 10l4-2v8l-4-2"/></svg></div>
+          <h3>Datos del archivo, siempre a la vista</h3>
+          <p>Duración, resolución, fotogramas por segundo y formato, reales y verificados — más ISO, lente o perfil de color cuando tu cámara los grabó en el archivo.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></div>
+          <h3>Pincel con tamaño, dureza y opacidad</h3>
+          <p>Igual que en un editor de fotos: ajustá cada parámetro con campos numéricos arrastrables o atajos de teclado.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15V6a2 2 0 00-2-2H5a2 2 0 00-2 2v9m18 0H3m18 0l-2.5 5h-13L3 15"/></svg></div>
+          <h3>Arrastrar y soltar clips</h3>
+          <p>Soltá los archivos directo sobre la ventana. También podés elegirlos desde el explorador de siempre.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div>
+          <h3>Cancelar cuando quieras</h3>
+          <p>Parás el procesamiento en cualquier punto del lote; los archivos parciales se limpian solos.</p>
         </div>
         <div class="feature glass">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
           <h3>Deshacer y rehacer</h3>
           <p>Historial completo de pinceladas mientras armás la máscara, con zoom y mano para moverte por el cuadro.</p>
         </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg></div>
+          <h3>Modo claro y oscuro</h3>
+          <p>La interfaz arranca en oscuro por defecto y cambia al instante, para editar sin cansar la vista.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0z"/><path d="M12 7v5l3 3"/></svg></div>
+          <h3>Procesamiento profesional</h3>
+          <p>PixelClean usa FFmpeg como motor interno para garantizar compatibilidad con los formatos de video más usados, sin instalar nada aparte.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="que-no-hace">
+    <div class="wrap">
+      <div class="cta-band glass reveal" style="flex-direction:column;align-items:flex-start;text-align:left">
+        <span class="eyebrow">Para que sepas qué esperar</span>
+        <h2 style="margin-top:12px">PixelClean no reemplaza una reparación del sensor.</h2>
+        <p style="color:var(--ink-soft);font-size:15.5px;margin-top:14px;max-width:66ch">Está diseñado para eliminar defectos puntuales y permanentes que aparecen siempre en el mismo lugar del cuadro, en todos los fotogramas. No corrige suciedad del lente, desenfoque, ruido de imagen ni objetos en movimiento — para eso, esta herramienta no es la indicada.</p>
       </div>
     </div>
   </section>
