@@ -225,7 +225,8 @@
   .price-list li { font-size: 14px; color: var(--ink-soft); padding-left: 22px; position: relative; }
   .price-list li::before { content: "✓"; position: absolute; left: 0; color: var(--stuck); font-weight: 700; }
   .price-card .btn { width: 100%; justify-content: center; }
-  .paypal-btn-wrap { width: 100%; }
+  .paypal-btn-wrap { width: 100%; min-height: 45px; }
+  .paypal-fallback { font-size: 13px; color: var(--ink-faint); line-height: 1.5; margin: 0; }
 
   /* ---------- payment modal ---------- */
   .pago-overlay {
@@ -435,14 +436,30 @@
       <span class="eyebrow">PixelClean Pro</span>
       <h3>Pagar $20 USD</h3>
       <p>Pago único, sin suscripción. Al confirmar en PayPal recibís la clave por email en poco tiempo.</p>
-      <div id="paypal-container-DPBYFXST9DGP6" class="paypal-btn-wrap"></div>
+      <div id="paypal-container-DPBYFXST9DGP6" class="paypal-btn-wrap">
+        <p class="paypal-fallback" id="paypalCargando">Cargando botón de pago...</p>
+      </div>
     </div>
   </div>
 
   <script>
-    if (window.paypal) {
-      paypal.HostedButtons({ hostedButtonId: "DPBYFXST9DGP6" }).render("#paypal-container-DPBYFXST9DGP6");
-    }
+    (function () {
+      var intentos = 0;
+      function intentarRenderPaypal() {
+        intentos++;
+        if (window.paypal && window.paypal.HostedButtons) {
+          document.getElementById("paypalCargando").remove();
+          paypal.HostedButtons({ hostedButtonId: "DPBYFXST9DGP6" }).render("#paypal-container-DPBYFXST9DGP6");
+        } else if (intentos < 20) {
+          setTimeout(intentarRenderPaypal, 300);
+        } else {
+          document.getElementById("paypalCargando").innerHTML =
+            'No se pudo cargar el botón de PayPal (puede ser un bloqueador de anuncios). ' +
+            'Desactivalo para este sitio y recargá la página, o escribinos.';
+        }
+      }
+      intentarRenderPaypal();
+    })();
     var pagoOverlay = document.getElementById("pagoOverlay");
     document.getElementById("btnComprarPro").addEventListener("click", function () {
       pagoOverlay.classList.add("open");
