@@ -592,7 +592,8 @@ class Api:
             mascara_l.save(mascara_bn_path)
 
             motor_gpu = self._detectar_motor_gpu()
-            nombres_gpu = {"nvenc": "NVIDIA (NVENC)", "qsv": "Intel Quick Sync", "amf": "AMD (AMF)"}
+            nombres_gpu = {"nvenc": "NVIDIA (NVENC)", "qsv": "Intel Quick Sync", "amf": "AMD (AMF)",
+                           "videotoolbox": "Apple (VideoToolbox)"}
             self._agregar_log(
                 f"Codificando con GPU: {nombres_gpu.get(motor_gpu, motor_gpu)}." if motor_gpu
                 else "Codificando con CPU (no se detecto GPU compatible).", True)

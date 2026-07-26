@@ -28,6 +28,7 @@ _CANDIDATOS_GPU = [
     ("nvenc", "h264_nvenc", ["-preset", "p4"]),
     ("qsv", "h264_qsv", []),
     ("amf", "h264_amf", ["-quality", "speed"]),
+    ("videotoolbox", "h264_videotoolbox", []),  # Mac (Apple Silicon e Intel)
 ]
 _cache_deteccion_gpu = {}
 
@@ -53,7 +54,7 @@ def _probar_encoder(ffmpeg_bin, codec_name, extra_args):
 
 
 def detectar_motor_gpu(ffmpeg_bin):
-    """Devuelve 'nvenc', 'qsv', 'amf' o None (sin GPU utilizable -> CPU).
+    """Devuelve 'nvenc', 'qsv', 'amf', 'videotoolbox' o None (sin GPU utilizable -> CPU).
     Prueba cada encoder con un mini-render de verdad, no solo si ffmpeg lo
     lista como compilado. El resultado se cachea por ejecutable de ffmpeg
     para no repetir la prueba en cada clip."""
@@ -79,6 +80,8 @@ def _codec_args(motor_gpu, preset_info, modo_calidad, bitrate_objetivo_bps):
         base = ["-c:v", "h264_qsv"]
     elif motor_gpu == "amf":
         base = ["-c:v", "h264_amf", "-quality", "speed"]
+    elif motor_gpu == "videotoolbox":
+        base = ["-c:v", "h264_videotoolbox"]
     else:
         base = ["-c:v", "libx264", "-preset", preset_info["preset"]]
 
@@ -93,6 +96,11 @@ def _codec_args(motor_gpu, preset_info, modo_calidad, bitrate_objetivo_bps):
         return base + ["-global_quality", crf]
     if motor_gpu == "amf":
         return base + ["-qp_i", crf, "-qp_p", crf]
+    if motor_gpu == "videotoolbox":
+        # h264_videotoolbox no soporta CRF -- usa -q:v (escala 1-100,
+        # mayor = mejor calidad), asi que se invierte el numero de CRF
+        # (mas bajo = mejor) a esa escala en vez de pasarlo directo.
+        return base + ["-q:v", str(max(1, 100 - int(crf) * 2))]
     return base + ["-crf", crf]
 
 
