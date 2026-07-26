@@ -9,11 +9,13 @@ import hashlib
 import io
 import json
 import logging
+import mimetypes
 import os
 import sys
 import threading
 import time
 import traceback
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import numpy as np
@@ -23,6 +25,7 @@ from PIL import Image, ImageFilter
 import deteccion_automatica
 import metadata_camara
 import motores_reparacion as motores
+from webview.dom import DOMEventHandler
 
 try:
     import cv2
@@ -63,7 +66,7 @@ RESOLUCIONES = {
 LICENCIA_HASH_PRO = "ab45d00dee70232649d49b004f952ecb6c0ae0a00663c15f5d7b4c2a3929d071"
 LIMITE_GRATIS_DIARIO = 5
 
-VERSION_APP = "1.1.0"
+VERSION_APP = "1.8.0"
 URL_ULTIMA_VERSION = "https://api.github.com/repos/PIXELCLEANPRO/PIXELCLEAN/releases/latest"
 URL_PAGINA_DESCARGA = "https://pixelclean-app.netlify.app"
 
@@ -91,6 +94,21 @@ def _carpeta_datos_app():
 
 def _ruta_datos_usuario(nombre_archivo):
     return os.path.join(_carpeta_datos_app(), nombre_archivo)
+
+
+def _carpeta_perfiles_usuario():
+    # A diferencia del resto de los datos de la app (config tecnica, cache de
+    # WebView2, etc.), los perfiles de camara son algo que el usuario arma a
+    # mano y espera encontrar/hacer backup facil -- se guardan en Documentos
+    # en vez de la carpeta tecnica escondida (%LOCALAPPDATA%), que a nadie se
+    # le ocurre revisar.
+    carpeta = os.path.join(os.path.expanduser("~"), "Documents", "PixelClean")
+    os.makedirs(carpeta, exist_ok=True)
+    return carpeta
+
+
+def _ruta_perfiles_camara():
+    return os.path.join(_carpeta_perfiles_usuario(), "perfiles_camara.json")
 
 
 def _pil_a_b64(img, formato="PNG"):
@@ -130,6 +148,15 @@ class Api:
         self._preview_lock = threading.Lock()
         self._preview_render_b64 = None
         self._preview_render_ultima = 0.0
+        self._motor_gpu_cache = "sin_probar"
+
+    def _detectar_motor_gpu(self):
+        """Prueba una sola vez por sesion que encoder de video acelerado por
+        GPU funciona de verdad en esta PC (NVENC/QuickSync/AMF) y devuelve
+        ese nombre, o None si no hay ninguno utilizable (cae a CPU/libx264)."""
+        if self._motor_gpu_cache == "sin_probar":
+            self._motor_gpu_cache = motores.detectar_motor_gpu(FFMPEG_BIN)
+        return self._motor_gpu_cache
 
     def set_ventana(self, ventana):
         self._ventana = ventana
@@ -303,10 +330,31 @@ class Api:
             os.remove(ruta_tmp)
             return {
                 "frame_b64": _pil_a_b64(img), "ancho": img.width, "alto": img.height,
-                "metadata": info_meta or {},
+                "metadata": info_meta or {}, "duracion_seg": info.get("duracion_seg") or 0,
             }
         except Exception as e:
-            return {"frame_b64": None, "ancho": 0, "alto": 0, "metadata": info_meta or {}, "error": str(e)}
+            return {"frame_b64": None, "ancho": 0, "alto": 0, "metadata": info_meta or {}, "duracion_seg": 0, "error": str(e)}
+
+    def obtener_frame_en(self, ruta_clip, segundo):
+        """Pide el cuadro de un instante puntual del clip (para el scrubber del
+        paso Mascara): sirve para buscar a mano un momento donde el defecto se
+        vea mejor, en vez de quedarse siempre con el cuadro del medio del clip."""
+        try:
+            import subprocess
+            import tempfile
+            ruta_tmp = os.path.join(tempfile.gettempdir(), f"_pixelclean_scrub_{os.getpid()}.png")
+            subprocess.run([FFMPEG_BIN, "-y", "-hide_banner", "-loglevel", "error",
+                             "-ss", str(max(float(segundo), 0)), "-i", ruta_clip, "-frames:v", "1", ruta_tmp],
+                            capture_output=True, timeout=15,
+                            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+            if not os.path.isfile(ruta_tmp):
+                return {"ok": False, "error": "No se pudo leer ese instante del clip."}
+            img = Image.open(ruta_tmp).convert("RGB")
+            self._frame_actual = img  # el resto del flujo (mascara, preview) usa este mismo cuadro
+            os.remove(ruta_tmp)
+            return {"ok": True, "frame_b64": _pil_a_b64(img)}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
 
     def elegir_mascara_png(self, ancho, alto):
         archivo = self._ventana.create_file_dialog(
@@ -344,16 +392,45 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
+    # ---------- pincel inteligente: el usuario pinta mas o menos, se afina solo ----------
+    def refinar_pincel_inteligente(self, ruta_clip, x0, y0, x1, y1):
+        try:
+            info = motores._info_basica(FFPROBE_BIN, ruta_clip)
+            bbox = (int(x0), int(y0), int(x1), int(y1))
+            ok, rgba, mensaje = deteccion_automatica.refinar_seleccion_por_contraste(
+                FFMPEG_BIN, ruta_clip, info.get("duracion_seg"), bbox)
+            if not ok:
+                return {"ok": False, "error": mensaje}
+            return {
+                "ok": True, "mascara_b64": _pil_a_b64(Image.fromarray(rgba, mode="RGBA")),
+                "x0": bbox[0], "y0": bbox[1], "x1": bbox[2], "y1": bbox[3], "mensaje": mensaje,
+            }
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     # ---------- perfiles guardados por camara (el usuario les pone nombre a mano) ----------
     def _leer_perfiles_camara(self):
+        # migra el archivo viejo (guardado por error en la carpeta tecnica
+        # escondida en versiones anteriores) la primera vez que lo encuentra.
+        ruta_nueva = _ruta_perfiles_camara()
+        if not os.path.isfile(ruta_nueva):
+            ruta_vieja = _ruta_datos_usuario("perfiles_camara.json")
+            if os.path.isfile(ruta_vieja):
+                try:
+                    with open(ruta_vieja, "r", encoding="utf-8") as f:
+                        datos_viejos = f.read()
+                    with open(ruta_nueva, "w", encoding="utf-8") as f:
+                        f.write(datos_viejos)
+                except Exception:
+                    pass
         try:
-            with open(_ruta_datos_usuario("perfiles_camara.json"), "r", encoding="utf-8") as f:
+            with open(ruta_nueva, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return {}
 
     def _guardar_perfiles_camara(self, perfiles):
-        with open(_ruta_datos_usuario("perfiles_camara.json"), "w", encoding="utf-8") as f:
+        with open(_ruta_perfiles_camara(), "w", encoding="utf-8") as f:
             json.dump(perfiles, f)
 
     def listar_perfiles_camara(self):
@@ -460,13 +537,27 @@ class Api:
             if ahora - self._preview_render_ultima < 2.0:
                 return
             self._preview_render_ultima = ahora
+        # OJO: esto tiene que correr en un hilo aparte, nunca en linea. Esta
+        # funcion la llama el callback de progreso, que corre en el mismo hilo
+        # que va leyendo la salida de ffmpeg del render real -- si acá adentro
+        # se bloquea 1-2s haciendo su propio ffmpeg + proceso de imagen, se deja
+        # de leer el stdout del ffmpeg real, su pipe se llena y HACE QUE EL
+        # RENDER REAL SE FRENE esperando que alguien lea. Un render que antes
+        # tardaba X terminaba tardando el doble o mas por esto.
+        threading.Thread(
+            target=self._generar_preview_render, args=(ruta_clip, frac, motor_id, mascara_rgba_arr, sigma),
+            daemon=True,
+        ).start()
+
+    def _generar_preview_render(self, ruta_clip, frac, motor_id, mascara_rgba_arr, sigma):
         try:
             import subprocess
             import tempfile
             info = motores._info_basica(FFPROBE_BIN, ruta_clip)
             duracion = info.get("duracion_seg") or 1.0
             segundo = max(min(frac, 0.98), 0.0) * duracion
-            ruta_tmp = os.path.join(tempfile.gettempdir(), f"_pixelclean_preview_{os.getpid()}.png")
+            ruta_tmp = os.path.join(
+                tempfile.gettempdir(), f"_pixelclean_preview_{os.getpid()}_{threading.get_ident()}.png")
             subprocess.run([FFMPEG_BIN, "-y", "-hide_banner", "-loglevel", "error",
                              "-ss", str(segundo), "-i", ruta_clip, "-frames:v", "1", ruta_tmp],
                             capture_output=True, timeout=15,
@@ -478,17 +569,12 @@ class Api:
             mascara_rs = np.asarray(Image.fromarray(mascara_rgba_arr, mode="RGBA")
                                      .resize((frame.shape[1], frame.shape[0])))
             mascara_alpha = mascara_rs[..., 3]
-            ys, xs = np.where(mascara_alpha > 20)
-            if len(xs) == 0:
-                return
-            pad = 80
-            x0, x1 = max(int(xs.min()) - pad, 0), min(int(xs.max()) + pad, frame.shape[1])
-            y0, y1 = max(int(ys.min()) - pad, 0), min(int(ys.max()) + pad, frame.shape[0])
-            crop = frame[y0:y1, x0:x1]
-            mascara_crop = mascara_alpha[y0:y1, x0:x1]
-            reparado = reparar_crop_preview(motor_id, crop, mascara_crop, sigma)
+            # cuadro completo, no solo el recorte de la mascara -- ahora que
+            # esto corre en su propio hilo (ver _actualizar_preview_render) ya
+            # no hay costo de bloquear el render real por hacerlo mas grande.
+            reparado = reparar_crop_preview(motor_id, frame, mascara_alpha, sigma)
             img_out = Image.fromarray(reparado)
-            img_out.thumbnail((320, 320))  # baja resolucion a proposito: solo orientativa
+            img_out.thumbnail((720, 720))  # mantiene relacion de aspecto original, solo limita el lado mas largo
             with self._preview_lock:
                 self._preview_render_b64 = _pil_a_b64(img_out)
         except Exception:
@@ -505,11 +591,17 @@ class Api:
             mascara_bn_path = os.path.join(carpeta_salida, "_mascara_bn.png")
             mascara_l.save(mascara_bn_path)
 
+            motor_gpu = self._detectar_motor_gpu()
+            nombres_gpu = {"nvenc": "NVIDIA (NVENC)", "qsv": "Intel Quick Sync", "amf": "AMD (AMF)"}
+            self._agregar_log(
+                f"Codificando con GPU: {nombres_gpu.get(motor_gpu, motor_gpu)}." if motor_gpu
+                else "Codificando con CPU (no se detecto GPU compatible).", True)
+
             preset_info = PRESETS_VELOCIDAD[payload["velocidad"]]
             parametros = {
                 "sigma_blur": payload["sigma"], "preset_info": preset_info,
                 "modo_calidad": payload["calidad"], "resolucion_objetivo": RESOLUCIONES[payload["resolucion"]],
-                "usar_nvenc": False, "radio_inpaint": 5, "metodo": "telea", "zoom_padding": 40,
+                "motor_gpu": motor_gpu, "radio_inpaint": 5, "metodo": "telea", "zoom_padding": 40,
                 "evento_cancelar": self._evento_cancelar,
             }
             motor_fn = motores.MOTORES[payload["motor"]]
@@ -570,11 +662,18 @@ def _iniciar_servidor(api):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=CARPETA_WEB, **kwargs)
 
+        def end_headers(self):
+            # WebView2/Chromium a veces sirve el index.html, app.js o style.css
+            # cacheados aunque el archivo en disco ya cambio (sobre todo entre
+            # reinicios de la app durante desarrollo). Sin esto, un Ctrl+R puede
+            # seguir mostrando una version vieja del frontend.
+            self.send_header("Cache-Control", "no-store")
+            super().end_headers()
+
         def _responder_json(self, datos):
             cuerpo = json.dumps(datos).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
-            self.send_header("Cache-Control", "no-store")
             self.send_header("Content-Length", str(len(cuerpo)))
             self.end_headers()
             self.wfile.write(cuerpo)
@@ -587,8 +686,59 @@ def _iniciar_servidor(api):
             elif ruta == "/preview_render":
                 with api._preview_lock:
                     self._responder_json({"preview_b64": api._preview_render_b64})
+            elif ruta == "/clip_video":
+                self._servir_video()
             else:
                 super().do_GET()
+
+        def _servir_video(self):
+            """Streamea el clip original directo desde disco (con soporte de
+            Range) para que el <video> del paso Mascara pueda reproducir y
+            buscar posiciones al instante, sin pasar por Python en cada
+            movimiento -- eso era lo que hacia lento al scrubber anterior."""
+            query = urllib.parse.urlsplit(self.path).query
+            ruta_video = urllib.parse.parse_qs(query).get("path", [None])[0]
+            if ruta_video:
+                ruta_video = urllib.parse.unquote(ruta_video)
+            if not ruta_video or not os.path.isfile(ruta_video):
+                self.send_error(404, "Clip no encontrado")
+                return
+
+            tamano = os.path.getsize(ruta_video)
+            tipo = mimetypes.guess_type(ruta_video)[0] or "video/mp4"
+            rango = self.headers.get("Range")
+
+            if rango:
+                unidad, _, valores = rango.partition("=")
+                inicio_txt, _, fin_txt = valores.partition("-")
+                inicio = int(inicio_txt) if inicio_txt else 0
+                fin = int(fin_txt) if fin_txt else tamano - 1
+                fin = min(fin, tamano - 1)
+                largo = max(fin - inicio + 1, 0)
+                self.send_response(206)
+                self.send_header("Content-Range", f"bytes {inicio}-{fin}/{tamano}")
+            else:
+                inicio, largo = 0, tamano
+                self.send_response(200)
+
+            self.send_header("Content-Type", tipo)
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Content-Length", str(largo))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+
+            try:
+                with open(ruta_video, "rb") as f:
+                    f.seek(inicio)
+                    restante = largo
+                    while restante > 0:
+                        trozo = f.read(min(262144, restante))
+                        if not trozo:
+                            break
+                        self.wfile.write(trozo)
+                        restante -= len(trozo)
+            except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+                pass  # el usuario siguio moviendo el scrubber y corto el pedido anterior; normal
 
         def log_message(self, formato, *args):
             pass
@@ -615,7 +765,7 @@ def main():
     # las coordenadas del mouse le llegan mal a la pagina (pintar en el lugar
     # equivocado). Se probo explicitamente y empeoraba las cosas.
     api = Api()
-    threading.Thread(target=api._revisar_actualizacion_en_fondo, daemon=True).start()
+    # threading.Thread(target=api._revisar_actualizacion_en_fondo, daemon=True).start()  # desactivado para demo local
     puerto = _iniciar_servidor(api)
     ventana = webview.create_window(
         "PixelClean - Reparador de pixeles quemados",
@@ -624,6 +774,30 @@ def main():
         background_color="#0b0d12",
     )
     api.set_ventana(ventana)
+
+    def _al_soltar_archivos(e):
+        # El navegador nunca expone la ruta real de un archivo soltado por
+        # seguridad; pywebview la inyecta como "pywebviewFullPath" pero SOLO
+        # para listeners de drop registrados por esta via (window.dom), no
+        # para un addEventListener comun hecho en el JS de la pagina -- por
+        # eso el drag&drop hecho solo en JS nunca funcionaba.
+        try:
+            archivos = (e.get("dataTransfer") or {}).get("files", [])
+            rutas = [f["pywebviewFullPath"] for f in archivos if f.get("pywebviewFullPath")]
+            rutas = [r for r in rutas if r.lower().endswith((".mp4", ".mov", ".mxf", ".avi", ".m4v", ".mkv"))]
+            if rutas:
+                ventana.evaluate_js(f"window.agregarClipsDesdeDrop({json.dumps(rutas)})")
+        except Exception:
+            logging.getLogger().exception("Error al procesar archivos soltados")
+
+    def _configurar_drag_and_drop():
+        try:
+            ventana.dom.document.events.dragover += DOMEventHandler(lambda e: None, prevent_default=True)
+            ventana.dom.document.events.drop += DOMEventHandler(_al_soltar_archivos, prevent_default=True)
+        except Exception:
+            logging.getLogger().exception("No se pudo registrar drag and drop nativo")
+
+    ventana.events.loaded += _configurar_drag_and_drop
     if os.name == "nt":
         # Instalado en Program Files, la carpeta del .exe queda de solo-lectura para
         # usuarios sin admin. Si no se fija storage_path, WebView2 intenta crear su

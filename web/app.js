@@ -25,6 +25,7 @@ const state = {
   calidad: "bitrate",
   velocidad: "Rapido",
   resolucion: "Original",
+  renderizando: false,
   isPainting: false, isPanning: false, lastPt: null, panStart: null, trazoInteligente: null,
   debounceTimer: null,
 };
@@ -280,6 +281,7 @@ function mostrarPaso(nuevo) {
 }
 
 document.getElementById("btnAtras").addEventListener("click", () => {
+  if (state.renderizando) return;
   if (state.step > 0) mostrarPaso(state.step - 1);
 });
 
@@ -1164,6 +1166,8 @@ async function procesarTodo() {
   }
 
   _seEstaCancelando = false;
+  state.renderizando = true;
+  document.getElementById("btnAtras").disabled = true;
   btn.disabled = true;
   document.getElementById("antesDeProcesar").style.display = "none";
   document.getElementById("estadoProcesando").style.display = "flex";
@@ -1237,6 +1241,8 @@ async function procesarTodo() {
 
     if (p.terminado && vimosArranque) {
       clearInterval(_pollTimer);
+      state.renderizando = false;
+      document.getElementById("btnAtras").disabled = state.step === 0;
       btn.disabled = false;
       btnCancelar.style.display = "none";
       document.querySelector(".ring-wrap").classList.remove("procesando");

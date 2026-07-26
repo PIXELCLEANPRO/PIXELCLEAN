@@ -6,6 +6,7 @@ Motores de reparacion de pixeles quemados. Cada motor tiene la misma firma:
 La mascara (ruta_mascara_bn) es una imagen PNG en escala de grises, ya con
 grosor/calado aplicados: 255 = zona a reparar, 0 = zona intacta.
 """
+import functools
 import json
 import os
 import subprocess
@@ -19,6 +20,80 @@ except ImportError:
     cv2 = None
 
 _SIN_VENTANA = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+
+# Candidatos de encoder por hardware, en orden de preferencia. Cada uno se
+# prueba de verdad (no alcanza con que ffmpeg lo liste como compilado -- eso
+# no garantiza que el driver/la placa realmente lo soporten).
+_CANDIDATOS_GPU = [
+    ("nvenc", "h264_nvenc", ["-preset", "p4"]),
+    ("qsv", "h264_qsv", []),
+    ("amf", "h264_amf", ["-quality", "speed"]),
+]
+_cache_deteccion_gpu = {}
+
+
+def _listar_encoders(ffmpeg_bin):
+    try:
+        r = subprocess.run([ffmpeg_bin, "-hide_banner", "-encoders"], capture_output=True,
+                            text=True, timeout=10, creationflags=_SIN_VENTANA)
+        return r.stdout
+    except Exception:
+        return ""
+
+
+def _probar_encoder(ffmpeg_bin, codec_name, extra_args):
+    try:
+        cmd = [ffmpeg_bin, "-y", "-hide_banner", "-loglevel", "error",
+               "-f", "lavfi", "-i", "color=c=black:s=256x256:d=0.1",
+               "-frames:v", "1", "-c:v", codec_name, *extra_args, "-f", "null", "-"]
+        r = subprocess.run(cmd, capture_output=True, timeout=10, creationflags=_SIN_VENTANA)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+def detectar_motor_gpu(ffmpeg_bin):
+    """Devuelve 'nvenc', 'qsv', 'amf' o None (sin GPU utilizable -> CPU).
+    Prueba cada encoder con un mini-render de verdad, no solo si ffmpeg lo
+    lista como compilado. El resultado se cachea por ejecutable de ffmpeg
+    para no repetir la prueba en cada clip."""
+    if ffmpeg_bin in _cache_deteccion_gpu:
+        return _cache_deteccion_gpu[ffmpeg_bin]
+    listado = _listar_encoders(ffmpeg_bin)
+    resultado = None
+    for nombre, codec, extra in _CANDIDATOS_GPU:
+        if codec in listado and _probar_encoder(ffmpeg_bin, codec, extra):
+            resultado = nombre
+            break
+    _cache_deteccion_gpu[ffmpeg_bin] = resultado
+    return resultado
+
+
+def _codec_args(motor_gpu, preset_info, modo_calidad, bitrate_objetivo_bps):
+    """Arma los argumentos de codec de ffmpeg para el encoder detectado
+    (GPU) o libx264 (CPU) como ultimo recurso, en el modo de calidad
+    (bitrate fijo o CRF/calidad) que haya elegido el usuario."""
+    if motor_gpu == "nvenc":
+        base = ["-c:v", "h264_nvenc", "-preset", "p4"]
+    elif motor_gpu == "qsv":
+        base = ["-c:v", "h264_qsv"]
+    elif motor_gpu == "amf":
+        base = ["-c:v", "h264_amf", "-quality", "speed"]
+    else:
+        base = ["-c:v", "libx264", "-preset", preset_info["preset"]]
+
+    if modo_calidad == "bitrate" and bitrate_objetivo_bps:
+        kbps = max(1000, int(bitrate_objetivo_bps / 1000))
+        return base + ["-b:v", f"{kbps}k", "-maxrate", f"{int(kbps*1.5)}k", "-bufsize", f"{kbps*2}k"]
+
+    crf = str(preset_info["crf"])
+    if motor_gpu == "nvenc":
+        return base + ["-cq", crf]
+    if motor_gpu == "qsv":
+        return base + ["-global_quality", crf]
+    if motor_gpu == "amf":
+        return base + ["-qp_i", crf, "-qp_p", crf]
+    return base + ["-crf", crf]
 
 
 def _info_basica(ffprobe_bin, ruta_video):
@@ -52,7 +127,7 @@ def motor_blur(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ruta_salida
     modo_calidad = parametros.get("modo_calidad", "crf")
     bitrate_objetivo_bps = parametros.get("bitrate_objetivo_bps")
     resolucion_objetivo = parametros.get("resolucion_objetivo")
-    usar_nvenc = parametros.get("usar_nvenc", False)
+    motor_gpu = parametros.get("motor_gpu")
 
     filtro = (
         "[0:v]split=2[base][toblur];"
@@ -66,17 +141,7 @@ def motor_blur(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ruta_salida
     else:
         etiqueta_salida = "[out]"
 
-    if usar_nvenc:
-        base_codec = ["-c:v", "h264_nvenc", "-preset", "p4"]
-    else:
-        base_codec = ["-c:v", "libx264", "-preset", preset_info["preset"]]
-
-    if modo_calidad == "bitrate" and bitrate_objetivo_bps:
-        kbps = max(1000, int(bitrate_objetivo_bps / 1000))
-        codec_args = base_codec + ["-b:v", f"{kbps}k", "-maxrate", f"{int(kbps*1.5)}k", "-bufsize", f"{kbps*2}k"]
-    else:
-        crf_arg = "-cq" if usar_nvenc else "-crf"
-        codec_args = base_codec + [crf_arg, str(preset_info["crf"])]
+    codec_args = _codec_args(motor_gpu, preset_info, modo_calidad, bitrate_objetivo_bps)
 
     cmd = [
         ffmpeg_bin, "-y", "-hide_banner", "-loglevel", "error",
@@ -166,16 +231,18 @@ def _pipeline_por_frame(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ru
         return False, str(e)
     mascara_recorte = mascara_arr[y0:y1, x0:x1]
 
+    # Se probo tambien decodificar con NVDEC (-hwaccel cuda) ademas de
+    # codificar con GPU. Medido: no ayuda -- el frame igual tiene que bajar
+    # a memoria de sistema para pasar por el pipe hacia python, asi que no se
+    # ahorra nada del lado de python, y el frame decodificado no se reusa en
+    # la GPU para nada mas. Solo queda el encode en GPU, que es donde si se
+    # midio una mejora real (~3x mas rapido que libx264 en la misma maquina).
     cmd_decode = [
         ffmpeg_bin, "-y", "-hide_banner", "-loglevel", "error",
         "-i", ruta_video, "-f", "rawvideo", "-pix_fmt", "bgr24", "pipe:1",
     ]
-    codec_args = ["-c:v", "libx264", "-preset", preset_info["preset"]]
-    if modo_calidad == "bitrate" and bitrate_objetivo_bps:
-        kbps = max(1000, int(bitrate_objetivo_bps / 1000))
-        codec_args += ["-b:v", f"{kbps}k", "-maxrate", f"{int(kbps*1.5)}k", "-bufsize", f"{kbps*2}k"]
-    else:
-        codec_args += ["-crf", str(preset_info["crf"])]
+    motor_gpu = parametros.get("motor_gpu")
+    codec_args = _codec_args(motor_gpu, preset_info, modo_calidad, bitrate_objetivo_bps)
 
     cmd_encode = [
         ffmpeg_bin, "-y", "-hide_banner", "-loglevel", "error",
@@ -198,6 +265,12 @@ def _pipeline_por_frame(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ru
     total_frames_estimado = int(duracion * fps) if duracion else None
     frames_leidos = 0
 
+    # Se probo repartir el recorte+inpaint de cada frame entre varios procesos
+    # (ProcessPoolExecutor). Medido contra un clip real: fue mas LENTO, no mas
+    # rapido -- el crop que se repara es chico (solo la zona de la mascara),
+    # asi que cv2.inpaint ya es barato por frame, y el costo de arrancar los
+    # procesos + mandar cada frame de un lado al otro (pickling) termina
+    # pesando mas que lo que se gana paralelizando. Se descarto esa idea.
     cancelado = False
     try:
         while True:
@@ -245,16 +318,19 @@ def _pipeline_por_frame(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ru
     return True, ruta_salida
 
 
+def _reparar_crop_opencv(crop_bgr, mascara_crop, radio, metodo_str):
+    metodo = cv2.INPAINT_TELEA if metodo_str == "telea" else cv2.INPAINT_NS
+    return cv2.inpaint(crop_bgr, mascara_crop, radio, metodo)
+
+
 def motor_opencv_inpaint(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ruta_salida,
                           parametros, callback_progreso):
     if cv2 is None:
         return False, "Falta instalar opencv-python."
 
     radio = parametros.get("radio_inpaint", 5)
-    metodo = cv2.INPAINT_TELEA if parametros.get("metodo", "telea") == "telea" else cv2.INPAINT_NS
-
-    def reparar_crop(crop_bgr, mascara_crop):
-        return cv2.inpaint(crop_bgr, mascara_crop, radio, metodo)
+    metodo_str = parametros.get("metodo", "telea")
+    reparar_crop = functools.partial(_reparar_crop_opencv, radio=radio, metodo_str=metodo_str)
 
     return _pipeline_por_frame(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ruta_salida,
                                 parametros, callback_progreso, reparar_crop)

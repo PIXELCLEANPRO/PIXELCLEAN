@@ -28,6 +28,8 @@
   <symbol id="i-droplet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s7 8.5 7 13a7 7 0 0 1-14 0c0-4.5 7-13 7-13z"/></symbol>
   <symbol id="i-spark" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5z"/></symbol>
   <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.5 12.5L20 3M20 3h-4M20 3v4"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 21 12 6 21"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="5" y="3" width="5" height="18"/><rect x="14" y="3" width="5" height="18"/></symbol>
 </svg>
 
 <div class="app" id="app">
@@ -89,6 +91,16 @@
           <button class="tool-btn" id="btnLoadPng"><svg width="17" height="17"><use href="#i-upload"/></svg><span class="tip">Cargar PNG</span></button>
           <button class="tool-btn" id="btnDetectarAuto"><svg width="17" height="17"><use href="#i-spark"/></svg><span class="tip">Detectar automatico (prueba)</span></button>
           <div class="tool-sep"></div>
+          <div class="tool-pop-wrap">
+            <button class="tool-btn" id="btnRealce"><svg width="17" height="17"><use href="#i-sun"/></svg><span class="tip">Resaltar</span></button>
+            <div class="realce-pop" id="realcePop">
+              <div class="realce-row"><span>Brillo</span><input type="range" id="sliderBrillo" min="50" max="200" value="100"></div>
+              <div class="realce-row"><span>Contraste</span><input type="range" id="sliderContraste" min="50" max="250" value="100"></div>
+              <div class="realce-row"><span>Saturacion</span><input type="range" id="sliderSaturacion" min="0" max="300" value="100"></div>
+              <button class="btn btn-ghost" id="btnResetRealce">Reset</button>
+            </div>
+          </div>
+          <div class="tool-sep"></div>
           <button class="tool-btn" id="btnZoomIn"><svg width="16" height="16"><use href="#i-zoomin"/></svg><span class="tip">Acercar</span></button>
           <button class="tool-btn" id="btnZoomOut"><svg width="16" height="16"><use href="#i-zoomout"/></svg><span class="tip">Alejar</span></button>
         </div>
@@ -119,45 +131,36 @@
             <span class="options-bar-hint" id="perfilesMsg"></span>
           </div>
           <div class="options-bar-hint" id="smartBrushMsg" style="display:none;padding:4px 12px"></div>
-          <div class="options-bar" id="barScrubVideo" style="gap:10px">
-            <span class="sf-label" style="align-self:center">Buscar cuadro (prueba)</span>
-            <input type="range" id="sliderTiempo" min="0" max="100" value="50" step="0.1" style="flex:1;max-width:320px">
-            <span class="options-bar-hint" id="lblTiempo" style="min-width:80px">00:00 / 00:00</span>
-          </div>
-          <div class="options-bar" id="barRealce" style="gap:10px">
-            <span class="sf-label" style="align-self:center">Resaltar (solo visual, prueba)</span>
-            <span class="sf-label">Contraste</span>
-            <input type="range" id="sliderContraste" min="50" max="250" value="100" style="width:110px">
-            <span class="sf-label">Saturacion</span>
-            <input type="range" id="sliderSaturacion" min="0" max="300" value="100" style="width:110px">
-            <button class="btn btn-ghost" id="btnResetRealce" style="padding:6px 10px">Reset</button>
-          </div>
           <div class="canvas-viewport" id="viewportMascara">
             <div class="canvas-stage" id="stageMascara">
-              <canvas id="cnvFrame"></canvas>
+              <video id="videoFrame" muted playsinline preload="auto"></video>
               <canvas id="cnvMask"></canvas>
             </div>
+            <div class="zoom-hud">
+              <button id="hudZoomOut"><svg width="14" height="14"><use href="#i-zoomout"/></svg></button>
+              <span class="pct" id="zoomPct">100%</span>
+              <button id="hudZoomIn"><svg width="14" height="14"><use href="#i-zoomin"/></svg></button>
+              <button id="hudZoomFit" title="Reencuadrar (ajustar al visor)"><svg width="14" height="14"><use href="#i-move"/></svg></button>
+            </div>
           </div>
-          <div class="zoom-hud">
-            <button id="hudZoomOut"><svg width="14" height="14"><use href="#i-zoomout"/></svg></button>
-            <span class="pct" id="zoomPct">100%</span>
-            <button id="hudZoomIn"><svg width="14" height="14"><use href="#i-zoomin"/></svg></button>
+          <div class="options-bar" id="barScrubVideo" style="gap:10px">
+            <button class="tool-btn" id="btnPlayPause" style="width:34px;height:34px"><svg width="16" height="16" id="iconPlayPause"><use href="#i-play"/></svg></button>
+            <input type="range" id="sliderTiempo" min="0" max="100" value="0" step="0.05" style="flex:1">
+            <span class="options-bar-hint" id="lblTiempo" style="min-width:80px">00:00 / 00:00</span>
           </div>
         </div>
       </div>
-      <div class="resizer" id="resizerMascara"></div>
-      <div class="preview-col" id="previewColMascara"></div>
     </div>
 
     <div class="panel panel-motor" data-step="2">
       <div class="card options-col">
         <div>
           <div class="section-title">Motor de reparacion</div>
-          <div class="engine-card selected" data-engine="blur">
+          <div class="engine-card" data-engine="blur">
             <div class="icon"><svg width="17" height="17"><use href="#i-droplet"/></svg></div>
             <div class="info"><div class="title">Blur gaussiano</div><div class="desc">Rapido, difumina la zona</div></div>
           </div>
-          <div class="engine-card" data-engine="opencv">
+          <div class="engine-card selected" data-engine="opencv">
             <div class="icon"><svg width="17" height="17"><use href="#i-spark"/></svg></div>
             <div class="info"><div class="title">OpenCV inpainting</div><div class="desc">Reconstruye bordes y textura</div></div>
             <div class="tag">Recomendado</div>
@@ -187,17 +190,28 @@
 
     <div class="panel panel-procesar" data-step="3">
       <div class="card ring-col">
-        <div class="ring-wrap">
-          <svg width="170" height="170">
-            <circle class="ring-track" cx="85" cy="85" r="72"/>
-            <circle class="ring-fill" id="ringFill" cx="85" cy="85" r="72" stroke-dasharray="452" stroke-dashoffset="452"/>
-          </svg>
-          <div class="ring-label" id="ringLabel">0%</div>
+        <div id="antesDeProcesar" class="antes-procesar">
+          <svg width="40" height="40" style="opacity:.5"><use href="#i-spark"/></svg>
+          <p>Apretá "Procesar" para arrancar el lote.</p>
         </div>
-        <div class="nav-info" id="lblProcesoInfo">0 / 0 clips</div>
-        <button class="btn btn-ghost" id="btnCancelar" style="display:none">Cancelar</button>
-        <img id="previewRenderImg" alt="Vista previa del render (baja calidad, orientativa)"
-             style="display:none;max-width:220px;border-radius:10px;margin-top:14px;opacity:0.9">
+        <div id="estadoProcesando" style="display:none;flex-direction:column;align-items:center;gap:14px">
+          <div class="ring-wrap">
+            <svg width="170" height="170">
+              <circle class="ring-track" cx="85" cy="85" r="72"/>
+              <circle class="ring-fill" id="ringFill" cx="85" cy="85" r="72" stroke-dasharray="452" stroke-dashoffset="452"/>
+            </svg>
+            <div class="ring-label" id="ringLabel">0%</div>
+          </div>
+          <div class="nav-info" id="lblProcesoInfo">0 / 0 clips</div>
+          <button class="btn btn-ghost" id="btnCancelar" style="display:none">Cancelar</button>
+        </div>
+      </div>
+      <div class="card preview-render-col">
+        <div class="section-title">Vista previa del render</div>
+        <div class="preview-render-body">
+          <img id="previewRenderImg" alt="Vista previa del render (baja calidad, orientativa)" style="display:none">
+          <p id="previewRenderPlaceholder" class="nav-info">Se va a ir viendo aca, en baja calidad, mientras se procesa.</p>
+        </div>
       </div>
       <div class="card log-col">
         <div class="log-box" id="logBox"></div>
