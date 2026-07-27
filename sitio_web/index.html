@@ -352,6 +352,10 @@
   .foot-links a:hover { color: var(--ink); }
   .foot-note { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); }
 
+  /* ---------- ads: collapse when Google has nothing to show ---------- */
+  ins.adsbygoogle[data-ad-status="unfilled"] { display: none !important; }
+  .ad-wrap:has(ins.adsbygoogle[data-ad-status="unfilled"]) { display: none !important; }
+
 </style>
 
 <header class="nav">
@@ -659,7 +663,7 @@
           <h3>Procesamiento profesional</h3>
           <p>PixelClean usa FFmpeg como motor interno para garantizar compatibilidad con los formatos de video más usados, sin instalar nada aparte.</p>
         </div>
-        <div class="feature glass" style="grid-column: 1 / -1; padding: 18px 20px">
+        <div class="ad-wrap" style="grid-column: 1 / -1">
           <ins class="adsbygoogle"
                style="display:block"
                data-ad-format="fluid"
@@ -703,7 +707,7 @@
     </div>
   </section>
 
-  <section class="section" style="padding: 0 0 40px">
+  <section class="section ad-wrap" style="padding: 0 0 40px">
     <div class="wrap">
       <ins class="adsbygoogle"
            style="display:block; text-align:center;"
