@@ -104,6 +104,29 @@ def _codec_args(motor_gpu, preset_info, modo_calidad, bitrate_objetivo_bps):
     return base + ["-crf", crf]
 
 
+def _rotacion_normalizada(video_stream):
+    """Angulo (0/90/180/270) que ffmpeg aplica solo al decodificar este
+    stream, por el tag "rotate" clasico o el "Display Matrix" side-data
+    que usan camaras como la Sony A7III al filmar en vertical (el archivo
+    queda codificado "acostado" con una bandera de rotacion). ffmpeg
+    autorota al decodificar, asi que el ancho/alto real -- como se ve, y
+    como sale del pipe de rawvideo -- puede ser el inverso del que
+    reporta el stream si no se corrige esto."""
+    rotate_tag = video_stream.get("tags", {}).get("rotate")
+    if rotate_tag is not None:
+        try:
+            return int(rotate_tag) % 360
+        except (TypeError, ValueError):
+            pass
+    for sd in video_stream.get("side_data_list") or []:
+        if "rotation" in sd:
+            try:
+                return int(sd["rotation"]) % 360
+            except (TypeError, ValueError):
+                pass
+    return 0
+
+
 def _info_basica(ffprobe_bin, ruta_video):
     cmd = [
         ffprobe_bin, "-v", "error", "-print_format", "json",
@@ -116,9 +139,13 @@ def _info_basica(ffprobe_bin, ruta_video):
     fps_txt = video_stream.get("r_frame_rate", "25/1")
     num, den = fps_txt.split("/")
     fps = float(num) / float(den) if float(den) else 25.0
+    ancho = int(video_stream.get("width", 0))
+    alto = int(video_stream.get("height", 0))
+    if _rotacion_normalizada(video_stream) in (90, 270):
+        ancho, alto = alto, ancho
     return {
-        "ancho": int(video_stream.get("width", 0)),
-        "alto": int(video_stream.get("height", 0)),
+        "ancho": ancho,
+        "alto": alto,
         "fps": fps,
         "duracion_seg": float(formato.get("duration", 0)) or None,
         "tiene_audio": any(s.get("codec_type") == "audio" for s in datos.get("streams", [])),
@@ -148,6 +175,15 @@ def motor_blur(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ruta_salida
         etiqueta_salida = "[outs]"
     else:
         etiqueta_salida = "[out]"
+    if motor_gpu:
+        # Camaras profesionales (Sony XAVC, etc.) suelen grabar en 10-bit
+        # 4:2:2 (yuv422p10le) -- los encoders de GPU de consumo (NVENC,
+        # Quick Sync, AMF) no soportan eso por H.264, solo 8-bit 4:2:0, y
+        # rechazan el encode entero si se les manda tal cual. libx264 (CPU)
+        # si soporta alta profundidad de color, asi que esta conversion
+        # solo se fuerza cuando se va a codificar por GPU.
+        filtro += f";{etiqueta_salida}format=yuv420p[outgpu]"
+        etiqueta_salida = "[outgpu]"
 
     codec_args = _codec_args(motor_gpu, preset_info, modo_calidad, bitrate_objetivo_bps)
 
@@ -252,13 +288,21 @@ def _pipeline_por_frame(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ru
     motor_gpu = parametros.get("motor_gpu")
     codec_args = _codec_args(motor_gpu, preset_info, modo_calidad, bitrate_objetivo_bps)
 
+    # El video se codifica primero SIN audio, a un archivo temporal. El audio
+    # se agrega despues en un segundo paso (remux, ver _remuxear_con_audio),
+    # en vez de mandarlo todo junto con "-shortest" en el mismo comando --
+    # con "-shortest" el video (que viene de un pipe sin duracion conocida de
+    # antemano) y el audio (que si tiene una duracion real, del archivo
+    # original) no se reconciliaban bien y el video terminaba mas largo que
+    # el audio. Haciendolo en dos pasos, para cuando se junta el audio el
+    # video temporal ya es un archivo real con duracion conocida, y ahi
+    # "-shortest" corta parejo de verdad.
+    ruta_video_tmp = ruta_salida + ".video_tmp.mp4"
     cmd_encode = [
         ffmpeg_bin, "-y", "-hide_banner", "-loglevel", "error",
         "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{ancho}x{alto}", "-r", str(fps), "-i", "pipe:0",
-        "-i", ruta_video,
-        "-map", "0:v", "-map", "1:a?",
-        *codec_args, "-threads", "0", "-c:a", "aac", "-b:a", "192k", "-shortest",
-        ruta_salida,
+        *codec_args, "-threads", "0",
+        ruta_video_tmp,
     ]
 
     try:
@@ -312,18 +356,65 @@ def _pipeline_por_frame(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ru
         proc_encode.wait()
 
     if cancelado:
-        if os.path.isfile(ruta_salida):
+        if os.path.isfile(ruta_video_tmp):
             try:
-                os.remove(ruta_salida)
+                os.remove(ruta_video_tmp)
             except OSError:
                 pass
         return False, "Cancelado por el usuario."
 
-    if proc_encode.returncode != 0 or not os.path.isfile(ruta_salida):
+    if proc_encode.returncode != 0 or not os.path.isfile(ruta_video_tmp):
         return False, f"ffmpeg (encode) devolvio error (codigo {proc_encode.returncode}):\n{stderr_encode[-600:]}"
 
     callback_progreso(1.0)
+    ok_remux, error_remux = _remuxear_con_audio(ffmpeg_bin, ffprobe_bin, ruta_video_tmp, ruta_video, ruta_salida, duracion)
+    try:
+        os.remove(ruta_video_tmp)
+    except OSError:
+        pass
+    if not ok_remux:
+        return False, f"No se pudo agregar el audio original:\n{error_remux[-600:]}"
     return True, ruta_salida
+
+
+def _remuxear_con_audio(ffmpeg_bin, ffprobe_bin, ruta_video_sin_audio, ruta_video_original, ruta_salida, duracion_original):
+    """Junta el video ya codificado (sin audio) con el audio del clip
+    original, en un archivo aparte que ya tiene duracion real y conocida --
+    ver el comentario en _pipeline_por_frame de por que no se hace todo en
+    un solo paso. El video se copia tal cual (ya esta codificado, no hace
+    falta re-codificarlo) y solo el audio se re-codifica a AAC (compatible
+    con MP4/MOV; el audio original de camara suele ser PCM sin comprimir).
+
+    Reconstruir el video cuadro a cuadro a un framerate fijo nominal (ver
+    _pipeline_por_frame) puede quedar con una duracion total levemente
+    distinta a la del clip original (decimales del framerate real, algun
+    cuadro de mas o de menos al decodificar), y esa pequeña diferencia se
+    va notando cada vez mas cuanto mas largo es el clip -- terminaba
+    desfasando bastante el audio en clips largos. Antes de mezclar el
+    audio, se mide la duracion real del video ya codificado contra la del
+    original y, si no coinciden, se corrige con "-itsscale": estira o
+    encoge levemente la linea de tiempo del video (una fraccion de
+    porcentaje, imperceptible) para que la duracion final quede exacta."""
+    duracion_tmp = _info_basica(ffprobe_bin, ruta_video_sin_audio)["duracion_seg"]
+    itsscale_args = []
+    if duracion_tmp and duracion_original and duracion_tmp > 0:
+        factor = duracion_original / duracion_tmp
+        if abs(factor - 1) > 0.0005:
+            itsscale_args = ["-itsscale", f"{factor:.6f}"]
+    cmd = [
+        ffmpeg_bin, "-y", "-hide_banner", "-loglevel", "error",
+        *itsscale_args, "-i", ruta_video_sin_audio, "-i", ruta_video_original,
+        "-map", "0:v", "-map", "1:a?",
+        "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest",
+        ruta_salida,
+    ]
+    try:
+        r = subprocess.run(cmd, capture_output=True, timeout=120, creationflags=_SIN_VENTANA)
+    except Exception as e:
+        return False, str(e)
+    if r.returncode != 0 or not os.path.isfile(ruta_salida):
+        return False, r.stderr.decode(errors="ignore")
+    return True, ""
 
 
 def _reparar_crop_opencv(crop_bgr, mascara_crop, radio, metodo_str):

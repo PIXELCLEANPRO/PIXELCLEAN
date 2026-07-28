@@ -26,7 +26,7 @@ const state = {
   velocidad: "Rapido",
   resolucion: "Original",
   renderizando: false,
-  isPainting: false, isPanning: false, lastPt: null, panStart: null, trazoInteligente: null,
+  isPainting: false, isPanning: false, lastPt: null, panStart: null,
   debounceTimer: null,
 };
 
@@ -47,45 +47,50 @@ const mockApi = {
   elegir_clips: async () => (["C:/videos/clip_prueba.mp4"]),
   obtener_frame_y_metadata: async (ruta) => ({
     frame_b64: mockFrameDataUrl, ancho: 640, alto: 360, duracion_seg: 137,
-    metadata: {marca: "Sony", modelo: "ILCE-7M3", lente: "FE 24-70mm F2.8 GM", iso: "800", perfil_color: "S-Log3",
-      resolucion: "3840x2160", duracion: "00:02:17", fps: 25, codec_video: "H.264", pixel_format: "yuv420p",
-      bitrate: "45.2 Mbps", peso: "742 MB", contenedor: "QuickTime / MOV", codec_audio: "AAC", audio_canales: 2, audio_sample_rate: "48 kHz"},
+    metadata: mockApi._metaPorRuta(ruta),
+  }),
+  obtener_metadata_clip: async (ruta) => ({metadata: mockApi._metaPorRuta(ruta)}),
+  _metaPorRuta: (ruta) => ({
+    nombre_archivo: (ruta || "clip.mp4").split(/[\\/]/).pop(),
+    marca: "Sony", modelo: "ILCE-7M3", lente: "FE 24-70mm F2.8 GM", iso: "800", perfil_color: "S-Log3",
+    resolucion: "3840x2160", duracion: "00:02:17", fotogramas: 3425, bits_color: "10-bit", formato: "QuickTime / MOV",
+    fps: 25, codec_video: "H.264", pixel_format: "yuv420p", bitrate: "45.2 Mbps", peso: "742 MB",
+    contenedor: "QuickTime / MOV", codec_audio: "AAC", audio_canales: 2, audio_sample_rate: "48 kHz",
+    fecha: "2026-07-25T04:35:25.000000Z",
   }),
   render_preview: async (motorId, maskB64, sigma) => ({antes_b64: mockFrameDataUrl, despues_b64: mockFrameDataUrl}),
   obtener_frame_en: async (ruta, segundo) => ({ok: true}),
   procesar_todo: async (payload) => {
-    mockApi._progreso = {completados: 0, total: payload.clips.length, por_clip: payload.clips.map(() => 0), logs: [], terminado: false};
+    mockApi._progreso = {
+      completados: 0, total: payload.clips.length, por_clip: payload.clips.map(() => 0),
+      rutas_salida: payload.clips.map(() => null), logs: [], terminado: false,
+    };
     let n = 0;
     const avanzar = () => {
       n++;
       mockApi._progreso.completados = n;
       mockApi._progreso.por_clip = mockApi._progreso.por_clip.map((_, i) => (i < n ? 1 : 0));
-      mockApi._progreso.logs.push({mensaje: `OK: clip_${n}.mp4 -> clip_${n}_reparado.mp4`, ok: true});
+      mockApi._progreso.rutas_salida[n - 1] = `C:/videos/PixelClean/clip_${n}.mp4`;
+      mockApi._progreso.logs.push({mensaje: `OK: clip_${n}.mp4 -> clip_${n}.mp4`, ok: true});
       if (n < payload.clips.length) setTimeout(avanzar, 700);
       else mockApi._progreso.terminado = true;
     };
     setTimeout(avanzar, 700);
     return {ok: true};
   },
+  mostrar_en_carpeta: async (ruta) => ({ok: false, error: "Modo de prueba en navegador: no se puede abrir el explorador de archivos aca."}),
   cancelar_procesamiento: async () => { if (mockApi._progreso) mockApi._progreso.terminado = true; return {ok: true}; },
   estado_licencia: async () => ({pro: false, restantes: 5, limite: 5}),
   activar_licencia: async () => ({ok: false, error: "Modo de prueba en navegador: no se puede validar una clave real aca."}),
   obtener_estado_actualizacion: async () => ({hay_actualizacion: false}),
   instalar_actualizacion: async () => ({ok: false, error: "Modo de prueba en navegador: la auto-instalacion solo funciona en la app real."}),
-  detectar_mascara_auto: async () => ({ok: true, mascara_b64: mockFrameDataUrl, mensaje: "Modo de prueba en navegador: mascara simulada (no es deteccion real)."}),
-  refinar_pincel_inteligente: async (ruta, x0, y0, x1, y1) => ({ok: false, error: "Modo de prueba en navegador: el pincel inteligente necesita la app real (analiza el clip de verdad)."}),
-  _perfilesMock: {},
-  listar_perfiles_camara: async () => Object.keys(mockApi._perfilesMock),
-  guardar_perfil_camara: async (nombre, mascaraB64, motor, sigma) => {
-    if (!nombre || !nombre.trim()) return {ok: false, error: "Poné un nombre para el perfil."};
-    mockApi._perfilesMock[nombre] = {mascara_b64: mascaraB64, motor, sigma};
-    return {ok: true};
+  _carpetaSalidaMock: null,
+  obtener_carpeta_salida: async () => ({carpeta: mockApi._carpetaSalidaMock}),
+  elegir_carpeta_salida: async () => {
+    mockApi._carpetaSalidaMock = "C:/Users/Usuario/Videos/Exportados (simulado)";
+    return {carpeta: mockApi._carpetaSalidaMock};
   },
-  cargar_perfil_camara: async (nombre) => {
-    const p = mockApi._perfilesMock[nombre];
-    return p ? {ok: true, ...p} : {ok: false, error: "No existe ese perfil."};
-  },
-  borrar_perfil_camara: async (nombre) => { delete mockApi._perfilesMock[nombre]; return {ok: true}; },
+  restablecer_carpeta_salida: async () => { mockApi._carpetaSalidaMock = null; return {carpeta: null}; },
 };
 
 // nota: el flujo real consulta el progreso por fetch('/progreso') servido por el mismo
@@ -269,8 +274,10 @@ function mostrarPaso(nuevo) {
   document.getElementById("btnAtras").disabled = nuevo === 0;
   document.getElementById("btnSiguiente").textContent = nuevo === PASOS.length - 1 ? "Procesar" : "Siguiente";
   document.getElementById("navInfo").textContent = "";
-  if (nuevo === 1) setTimeout(fitCanvasToViewport, 30);
-  else videoFrame.pause();
+  if (nuevo === 1) {
+    if (!state.frameImg) document.getElementById("viewportLoading").style.display = "flex";
+    setTimeout(fitCanvasToViewport, 30);
+  } else videoFrame.pause();
   if (nuevo === 2) actualizarPreview("motor");
   if (nuevo === 3 && !_pollTimer) {
     // recien se entra al paso, todavia no se apreto "Procesar": no mostrar
@@ -295,15 +302,19 @@ document.getElementById("btnSiguiente").addEventListener("click", () => {
 });
 
 /* ---------------- Paso 1: Clip ---------------- */
+let _clipSeleccionado = 0;
+const _metaCache = {};
+
 function renderizarListaClips() {
   document.getElementById("lblClips").textContent = state.clips.length ? `${state.clips.length} clip(s) cargado(s)` : "Ningun clip cargado";
   const list = document.getElementById("clipList");
   list.innerHTML = "";
   state.clips.forEach((ruta, i) => {
     const row = document.createElement("div");
-    row.className = "clip-row";
+    row.className = "clip-row" + (i === _clipSeleccionado ? " selected" : "");
     const nombre = ruta.split(/[\\/]/).pop();
     row.innerHTML = `<span class="name">${nombre}</span><div class="bar"><div style="width:0%"></div></div><button class="clip-remove" data-i="${i}" title="Quitar">&times;</button>`;
+    row.addEventListener("click", () => mostrarInfoClip(i));
     list.appendChild(row);
   });
   list.querySelectorAll(".clip-remove").forEach(btn => {
@@ -314,8 +325,28 @@ function renderizarListaClips() {
   });
 }
 
+async function mostrarInfoClip(indice) {
+  const ruta = state.clips[indice];
+  if (!ruta) return;
+  _clipSeleccionado = indice;
+  document.querySelectorAll("#clipList .clip-row").forEach((row, i) => {
+    row.classList.toggle("selected", i === indice);
+  });
+  if (!_metaCache[ruta]) {
+    document.getElementById("metaFields").innerHTML = `<div class="meta-field"><span class="k">Leyendo datos del archivo...</span></div>`;
+    _metaCache[ruta] = await api.obtener_metadata_clip(ruta);
+  }
+  // si mientras se esperaba la respuesta el usuario ya clickeo otro clip,
+  // no pisar su info con la de este pedido que llego tarde
+  if (_clipSeleccionado !== indice) return;
+  mostrarMetadata(_metaCache[ruta].metadata);
+}
+
 async function quitarClip(indice) {
+  const ruta = state.clips[indice];
+  delete _metaCache[ruta];
   state.clips.splice(indice, 1);
+  if (_clipSeleccionado >= state.clips.length) _clipSeleccionado = Math.max(0, state.clips.length - 1);
   renderizarListaClips();
   if (!state.clips.length) {
     state.frameImg = null;
@@ -327,17 +358,27 @@ async function quitarClip(indice) {
   const datos = await api.obtener_frame_y_metadata(state.clips[0]);
   state.duracionSeg = datos.duracion_seg || 0;
   cargarFrameMuestra(datos);
-  mostrarMetadata(datos.metadata);
+  _metaCache[state.clips[0]] = {metadata: datos.metadata};
+  mostrarInfoClip(_clipSeleccionado);
 }
 
 async function establecerClips(archivos) {
   if (!archivos || !archivos.length) return;
   state.clips = archivos;
+  _clipSeleccionado = 0;
+  state.frameImg = null; // hasta que cargarFrameMuestra confirme el nuevo cuadro, el visor de Mascara no tiene nada listo para mostrar
   renderizarListaClips();
+  document.getElementById("metaFields").innerHTML = `<div class="meta-field"><span class="k">Leyendo datos del archivo...</span></div>`;
+  // se prende ya (no recien cuando termine de leer los datos) para que si el
+  // usuario pasa al paso Mascara mientras esto todavia esta cargando, no se
+  // encuentre con la pantalla en negro sin ningun indicio de que esta
+  // cargando.
+  document.getElementById("viewportLoading").style.display = "flex";
   const datos = await api.obtener_frame_y_metadata(archivos[0]);
   state.duracionSeg = datos.duracion_seg || 0;
   cargarFrameMuestra(datos);
-  mostrarMetadata(datos.metadata);
+  _metaCache[archivos[0]] = {metadata: datos.metadata};
+  mostrarInfoClip(0);
 }
 
 function formatoTiempo(seg) {
@@ -378,9 +419,12 @@ function mostrarMetadata(meta) {
   span.textContent = (meta && meta.marca) ? meta.marca : "Marca no detectada";
 
   const grupos = [
+    {titulo: "Archivo", campos: [["Nombre del archivo", "nombre_archivo"], ["Duracion", "duracion"],
+      ["Fotogramas", "fotogramas"], ["Bits de color", "bits_color"], ["Fecha y hora de grabacion", "fecha"],
+      ["Formato", "formato"]]},
     {titulo: "Camara y lente", campos: [["Modelo", "modelo"], ["Lente", "lente"], ["ISO", "iso"],
-      ["Perfil de color", "perfil_color"], ["Espacio de color", "espacio_color"], ["Timecode", "timecode"], ["Fecha de grabacion", "fecha"]]},
-    {titulo: "Archivo y codificacion", campos: [["Resolucion", "resolucion"], ["Duracion", "duracion"], ["FPS", "fps"],
+      ["Perfil de color", "perfil_color"], ["Espacio de color", "espacio_color"], ["Timecode", "timecode"]]},
+    {titulo: "Codificacion", campos: [["Resolucion", "resolucion"], ["FPS", "fps"],
       ["Codec de video", "codec_video"], ["Formato de pixel", "pixel_format"], ["Bitrate", "bitrate"], ["Peso", "peso"],
       ["Contenedor", "contenedor"], ["Codec de audio", "codec_audio"], ["Canales de audio", "audio_canales"], ["Frecuencia de audio", "audio_sample_rate"]]},
   ];
@@ -420,11 +464,23 @@ function cargarFrameMuestra(datos) {
   cnvMask.width = state.frameW; cnvMask.height = state.frameH;
   ctxMask.clearRect(0, 0, state.frameW, state.frameH);
   videoFrame.pause();
+  document.getElementById("viewportLoading").style.display = "flex";
   videoFrame.src = `/clip_video?path=${encodeURIComponent(state.clips[0])}`;
   videoFrame.load();
   pushHistory();
   fitCanvasToViewport();
 }
+
+// El <video> puede tardar en tener el primer cuadro listo para pintar (clips
+// pesados, disco lento, etc.) -- mientras tanto se ve todo negro sin este
+// spinner. "loadeddata" se dispara apenas hay un frame decodificado, sirve
+// tanto para la carga inicial como para cada vez que cambia el src.
+videoFrame.addEventListener("loadeddata", () => {
+  document.getElementById("viewportLoading").style.display = "none";
+});
+videoFrame.addEventListener("error", () => {
+  document.getElementById("viewportLoading").style.display = "none";
+});
 
 // El scrubber real: seek nativo del <video> (instantaneo, nada de ida y vuelta
 // a Python por cada movimiento -- eso era lo que hacia lento al scrubber viejo).
@@ -538,9 +594,9 @@ document.querySelectorAll("#toolbarMascara .tool-btn[data-tool]").forEach(b => {
 });
 
 function actualizarCursorPincel() {
-  const visible = state.tool === "brush" || state.tool === "eraser" || state.tool === "smartbrush";
+  const visible = state.tool === "brush" || state.tool === "eraser";
   brushCursor.style.display = visible ? "block" : "none";
-  brushCursor.style.borderColor = state.tool === "eraser" ? "#ff6666" : (state.tool === "smartbrush" ? "#f5d90a" : "#ffffff");
+  brushCursor.style.borderColor = state.tool === "eraser" ? "#ff6666" : "#ffffff";
 }
 
 function coordsAImagen(clientX, clientY) {
@@ -610,7 +666,6 @@ viewport.addEventListener("mousedown", (e) => {
     viewport.classList.add("panning");
   } else if (state.frameImg) {
     state.isPainting = true;
-    state.trazoInteligente = null;
     state.lastPt = coordsAImagen(e.clientX, e.clientY);
     pintarEn(e.clientX, e.clientY);
   }
@@ -618,57 +673,15 @@ viewport.addEventListener("mousedown", (e) => {
 window.addEventListener("mouseup", () => {
   if (state.isPainting) {
     state.isPainting = false; state.lastPt = null; pushHistory(); actualizarPreview("mascara");
-    if (state.tool === "smartbrush" && state.trazoInteligente) { refinarTrazoInteligente(state.trazoInteligente); state.trazoInteligente = null; }
   }
   if (state.isPanning) { state.isPanning = false; viewport.classList.remove("panning"); }
   if (state.isResizingBrush) { state.isResizingBrush = false; actualizarCursorPincel(); }
 });
 
-/* ---------------- Pincel inteligente (de prueba): pintas grueso, se ajusta solo ---------------- */
-async function refinarTrazoInteligente(bbox) {
-  const msg = document.getElementById("smartBrushMsg");
-  if (!state.clips.length || !api.refinar_pincel_inteligente) return;
-  const x0 = Math.max(0, Math.floor(bbox.minX)), y0 = Math.max(0, Math.floor(bbox.minY));
-  const x1 = Math.min(state.frameW, Math.ceil(bbox.maxX)), y1 = Math.min(state.frameH, Math.ceil(bbox.maxY));
-  msg.style.display = "block";
-  msg.textContent = "Analizando la zona pintada...";
-  try {
-    const resultado = await api.refinar_pincel_inteligente(state.clips[0], x0, y0, x1, y1);
-    if (!resultado.ok) {
-      msg.textContent = resultado.error || "No se pudo afinar la seleccion.";
-      setTimeout(() => { msg.style.display = "none"; }, 3000);
-      return;
-    }
-    // borra lo pintado grueso en esa zona y dibuja solo lo que la deteccion confirmo
-    ctxMask.clearRect(x0, y0, x1 - x0, y1 - y0);
-    const img = new Image();
-    img.onload = () => {
-      ctxMask.drawImage(img, x0, y0, x1 - x0, y1 - y0);
-      pushHistory();
-      actualizarPreview("mascara");
-      msg.textContent = resultado.mensaje || "Listo.";
-      setTimeout(() => { msg.style.display = "none"; }, 2500);
-    };
-    img.src = resultado.mascara_b64;
-  } catch (err) {
-    msg.textContent = "No se pudo afinar la seleccion (" + err.message + ").";
-    setTimeout(() => { msg.style.display = "none"; }, 3000);
-  }
-}
-
 function estamparDab(x, y) {
   const radio = state.brushSize;
   const dureza = state.hardness / 100;
   const opacidad = state.opacity / 100;
-  if (state.tool === "smartbrush") {
-    if (!state.trazoInteligente) state.trazoInteligente = {minX: x - radio, minY: y - radio, maxX: x + radio, maxY: y + radio};
-    else {
-      state.trazoInteligente.minX = Math.min(state.trazoInteligente.minX, x - radio);
-      state.trazoInteligente.minY = Math.min(state.trazoInteligente.minY, y - radio);
-      state.trazoInteligente.maxX = Math.max(state.trazoInteligente.maxX, x + radio);
-      state.trazoInteligente.maxY = Math.max(state.trazoInteligente.maxY, y + radio);
-    }
-  }
   ctxMask.globalCompositeOperation = (state.tool === "eraser") ? "destination-out" : "source-over";
   // el radio interior tiene que ser siempre menor al exterior: si son iguales (dureza 100%)
   // el gradiente queda degenerado y algunos motores de renderizado no pintan nada.
@@ -720,24 +733,27 @@ function restaurarDesde(dataUrl) {
   img.onload = () => { ctxMask.clearRect(0, 0, cnvMask.width, cnvMask.height); ctxMask.drawImage(img, 0, 0); actualizarPreview("mascara"); };
   img.src = dataUrl;
 }
-document.getElementById("btnUndo").addEventListener("click", () => {
+function deshacer() {
   if (state.historyIndex > 0) { state.historyIndex--; restaurarDesde(state.history[state.historyIndex]); state.maskBaseSnapshot = state.history[state.historyIndex]; }
-});
-document.getElementById("btnRedo").addEventListener("click", () => {
+}
+function rehacer() {
   if (state.historyIndex < state.history.length - 1) { state.historyIndex++; restaurarDesde(state.history[state.historyIndex]); state.maskBaseSnapshot = state.history[state.historyIndex]; }
-});
-document.getElementById("btnRotate").addEventListener("click", () => {
+}
+function rotarMascara(sentido) {
+  // sentido: 1 = derecha (horario), -1 = izquierda (antihorario)
   const tmp = document.createElement("canvas");
   tmp.width = cnvMask.width; tmp.height = cnvMask.height;
   const tctx = tmp.getContext("2d");
   tctx.translate(tmp.width / 2, tmp.height / 2);
-  tctx.rotate(Math.PI / 2);
+  tctx.rotate(sentido * Math.PI / 2);
   tctx.drawImage(cnvMask, -tmp.width / 2, -tmp.height / 2);
   ctxMask.clearRect(0, 0, cnvMask.width, cnvMask.height);
   ctxMask.drawImage(tmp, 0, 0);
   pushHistory();
   actualizarPreview("mascara");
-});
+}
+document.getElementById("btnRotateLeft").addEventListener("click", () => rotarMascara(-1));
+document.getElementById("btnRotateRight").addEventListener("click", () => rotarMascara(1));
 
 /* --- campos "scrub" estilo Photoshop: arrastras el numero, doble click para escribir --- */
 function crearCampoScrub(id, {min, max, valorInicial, sensibilidad = 1, onChange}) {
@@ -820,75 +836,16 @@ document.getElementById("btnLoadPng").addEventListener("click", async () => {
   img.src = resultado;
 });
 
-/* ---------------- Batch inteligente: deteccion automatica (de prueba) ---------------- */
-document.getElementById("btnDetectarAuto").addEventListener("click", async () => {
-  if (!state.clips.length || !api.detectar_mascara_auto) return;
-  const btn = document.getElementById("btnDetectarAuto");
-  btn.disabled = true;
-  try {
-    const resultado = await api.detectar_mascara_auto(state.clips[0]);
-    if (!resultado.ok) {
-      alert(resultado.error || "No se pudo detectar el punto quemado automaticamente.");
-      return;
-    }
-    const img = new Image();
-    img.onload = () => {
-      ctxMask.clearRect(0, 0, cnvMask.width, cnvMask.height);
-      ctxMask.drawImage(img, 0, 0, cnvMask.width, cnvMask.height);
-      cnvMask.style.opacity = "0.55";
-      pushHistory();
-      actualizarPreview("mascara");
-    };
-    img.src = resultado.mascara_b64;
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-/* ---------------- Perfiles guardados por camara (de prueba, el usuario les pone nombre) ---------------- */
-async function refrescarPerfiles() {
-  if (!api.listar_perfiles_camara) return;
-  const nombres = await api.listar_perfiles_camara().catch(() => []);
-  const sel = document.getElementById("selectPerfiles");
-  const actual = sel.value;
-  sel.innerHTML = '<option value="">Sin perfil</option>' + nombres.map(n => `<option value="${n}">${n}</option>`).join("");
-  if (nombres.includes(actual)) sel.value = actual;
+function nombreSugeridoMascara() {
+  const meta = _metaCache[state.clips[0]] && _metaCache[state.clips[0]].metadata;
+  const camara = meta && [meta.marca, meta.modelo].filter(Boolean).join(" ");
+  return camara ? `${camara} - PixelCleanMask` : "PixelCleanMask";
 }
-refrescarPerfiles();
 
-document.getElementById("btnGuardarPerfil").addEventListener("click", async () => {
-  if (!hayMascara()) { document.getElementById("perfilesMsg").textContent = "Primero marca una mascara."; return; }
-  const nombre = prompt("Nombre para este perfil (ej: Sony A7III - mi punto quemado):", "");
-  if (!nombre) return;
-  const resultado = await api.guardar_perfil_camara(nombre.trim(), cnvMask.toDataURL(), state.motor, state.sigma);
-  const msg = document.getElementById("perfilesMsg");
-  if (resultado.ok) {
-    msg.textContent = `Guardado: "${nombre.trim()}"`;
-    await refrescarPerfiles();
-    document.getElementById("selectPerfiles").value = nombre.trim();
-  } else {
-    msg.textContent = resultado.error || "No se pudo guardar.";
-  }
-});
-
-document.getElementById("btnCargarPerfil").addEventListener("click", async () => {
-  const nombre = document.getElementById("selectPerfiles").value;
-  const msg = document.getElementById("perfilesMsg");
-  if (!nombre) { msg.textContent = "Elegi un perfil de la lista."; return; }
-  const resultado = await api.cargar_perfil_camara(nombre);
-  if (!resultado.ok) { msg.textContent = resultado.error || "No se pudo cargar."; return; }
-  const img = new Image();
-  img.onload = () => {
-    ctxMask.clearRect(0, 0, cnvMask.width, cnvMask.height);
-    ctxMask.drawImage(img, 0, 0, cnvMask.width, cnvMask.height);
-    cnvMask.style.opacity = "0.55";
-    pushHistory();
-    actualizarPreview("mascara");
-  };
-  img.src = resultado.mascara_b64;
-  if (typeof resultado.motor === "string") state.motor = resultado.motor;
-  if (typeof resultado.sigma === "number") state.sigma = resultado.sigma;
-  msg.textContent = `Perfil "${nombre}" aplicado.`;
+document.getElementById("btnBajarPng").addEventListener("click", async () => {
+  if (!hayMascara()) { alert("Primero marca una mascara."); return; }
+  if (!api.guardar_mascara_png) return;
+  await api.guardar_mascara_png(cnvMask.toDataURL(), nombreSugeridoMascara());
 });
 
 /* ---------------- Resaltar (brillo/contraste/saturacion) ---------------- */
@@ -936,16 +893,6 @@ document.getElementById("btnResetRealce").addEventListener("click", () => {
   videoFrame.style.filter = "none";
 });
 
-document.getElementById("btnBorrarPerfil").addEventListener("click", async () => {
-  const nombre = document.getElementById("selectPerfiles").value;
-  const msg = document.getElementById("perfilesMsg");
-  if (!nombre) { msg.textContent = "Elegi un perfil de la lista."; return; }
-  if (!confirm(`Borrar el perfil "${nombre}"?`)) return;
-  await api.borrar_perfil_camara(nombre);
-  msg.textContent = `Perfil "${nombre}" borrado.`;
-  await refrescarPerfiles();
-});
-
 window.addEventListener("resize", () => { if (state.step === 1) fitCanvasToViewport(); });
 
 /* ---------------- Paneles redimensionables ---------------- */
@@ -969,6 +916,7 @@ function habilitarResizer(resizerEl, panelEl, {min = 220, max = 1400} = {}) {
   });
 }
 habilitarResizer(document.getElementById("resizerMotor"), document.getElementById("previewColMotor"));
+habilitarResizer(document.getElementById("resizerProcesar"), document.querySelector(".log-col"));
 
 /* ---------------- Paneles de vista previa (Antes/Despues) reutilizables ---------------- */
 const panEstadoPorPanel = {};
@@ -1097,14 +1045,19 @@ async function actualizarPreview(contexto) {
 }
 
 /* ---------------- Paso 3: Motor y calidad ---------------- */
+function actualizarVisibilidadSigma() {
+  document.getElementById("grupoSigma").style.display = state.motor === "blur" ? "block" : "none";
+}
 document.querySelectorAll(".engine-card").forEach(card => {
   card.addEventListener("click", () => {
     document.querySelectorAll(".engine-card").forEach(c => c.classList.remove("selected"));
     card.classList.add("selected");
     state.motor = card.dataset.engine;
+    actualizarVisibilidadSigma();
     actualizarPreview("motor");
   });
 });
+actualizarVisibilidadSigma();
 document.getElementById("sliderSigma").addEventListener("input", (e) => { state.sigma = Number(e.target.value); debounceActualizarPreview("motor"); });
 document.querySelectorAll('input[name="calidad"]').forEach(r => r.addEventListener("change", (e) => { state.calidad = e.target.value; }));
 document.querySelectorAll("#pillVelocidad .pill").forEach(p => {
@@ -1115,6 +1068,32 @@ document.querySelectorAll("#pillVelocidad .pill").forEach(p => {
   });
 });
 document.getElementById("selectResolucion").addEventListener("change", (e) => { state.resolucion = e.target.value; });
+
+/* ---------------- Carpeta de exportacion ---------------- */
+function pintarCarpetaSalida(carpeta) {
+  const lbl = document.getElementById("lblCarpetaSalida");
+  const btnRestablecer = document.getElementById("btnRestablecerCarpetaSalida");
+  if (carpeta) {
+    lbl.textContent = `Se va a crear "PixelClean" dentro de: ${carpeta}`;
+    btnRestablecer.style.display = "inline-flex";
+  } else {
+    lbl.textContent = 'Predeterminada: junto al medio original, en una carpeta "PixelClean".';
+    btnRestablecer.style.display = "none";
+  }
+}
+(async () => {
+  if (!api.obtener_carpeta_salida) return;
+  const { carpeta } = await api.obtener_carpeta_salida();
+  pintarCarpetaSalida(carpeta);
+})();
+document.getElementById("btnElegirCarpetaSalida").addEventListener("click", async () => {
+  const { carpeta } = await api.elegir_carpeta_salida();
+  pintarCarpetaSalida(carpeta);
+});
+document.getElementById("btnRestablecerCarpetaSalida").addEventListener("click", async () => {
+  const { carpeta } = await api.restablecer_carpeta_salida();
+  pintarCarpetaSalida(carpeta);
+});
 
 /* ---------------- Paso 4: Procesar ---------------- */
 const CIRC = 2 * Math.PI * 72;
@@ -1134,6 +1113,33 @@ function logLinea(texto, tipo) {
 function actualizarProgresoClip(index, frac) {
   const rows = document.querySelectorAll("#clipList .clip-row .bar > div");
   if (rows[index]) rows[index].style.width = Math.round(frac * 100) + "%";
+}
+
+function renderizarListaArchivosProceso() {
+  const cont = document.getElementById("archivosProcesoList");
+  cont.innerHTML = "";
+  state.clips.forEach((ruta) => {
+    const nombre = ruta.split(/[\\/]/).pop();
+    const row = document.createElement("div");
+    row.className = "archivo-proceso-row";
+    row.innerHTML = `<span class="name">${nombre}</span><div class="bar"><div style="width:0%"></div></div><button class="btn-carpeta">Mostrar en carpeta</button>`;
+    cont.appendChild(row);
+  });
+}
+
+function actualizarFilaArchivoProceso(index, frac, rutaSalida) {
+  const row = document.querySelectorAll("#archivosProcesoList .archivo-proceso-row")[index];
+  if (!row) return;
+  if (frac >= 1) {
+    row.classList.remove("exito", "error");
+    row.classList.add(rutaSalida ? "exito" : "error");
+    if (rutaSalida) {
+      const btn = row.querySelector(".btn-carpeta");
+      btn.onclick = () => api.mostrar_en_carpeta(rutaSalida).catch(() => {});
+    }
+  } else {
+    row.querySelector(".bar > div").style.width = Math.round(frac * 100) + "%";
+  }
 }
 
 let _pollTimer = null;
@@ -1180,6 +1186,7 @@ async function procesarTodo() {
   setAnillo(0);
   document.querySelector(".ring-wrap").classList.add("procesando");
   document.querySelectorAll("#clipList .clip-row .bar > div").forEach((b) => { b.style.width = "0%"; });
+  renderizarListaArchivosProceso();
   const imgPreviewRender = document.getElementById("previewRenderImg");
   imgPreviewRender.style.display = "none";
   document.getElementById("previewRenderPlaceholder").style.display = "block";
@@ -1221,6 +1228,8 @@ async function procesarTodo() {
     setAnillo(fracGeneral);
     document.getElementById("lblProcesoInfo").textContent = `${p.completados} / ${p.total} clips`;
     porClip.forEach((frac, i) => actualizarProgresoClip(i, frac));
+    const rutasSalida = p.rutas_salida || [];
+    porClip.forEach((frac, i) => actualizarFilaArchivoProceso(i, frac, rutasSalida[i]));
     (p.logs || []).slice(_logsMostrados).forEach((l) => logLinea(l.mensaje, l.ok ? "ok" : "err"));
     _logsMostrados = (p.logs || []).length;
     document.querySelector(".ring-wrap").classList.toggle("procesando", !p.terminado);
@@ -1267,6 +1276,7 @@ function resetearPasoProcesar() {
   _logsMostrados = 0;
   setAnillo(0);
   document.querySelectorAll("#clipList .clip-row .bar > div").forEach((b) => { b.style.width = "0%"; });
+  document.getElementById("archivosProcesoList").innerHTML = "";
   imgPreviewRender.style.display = "none";
   document.getElementById("previewRenderPlaceholder").textContent = "Se va a ir viendo aca, en baja calidad, mientras se procesa.";
   document.getElementById("previewRenderPlaceholder").style.display = "block";
@@ -1286,11 +1296,11 @@ window.addEventListener("keydown", (e) => {
   }
   if (ctrl && e.key.toLowerCase() === "z") {
     e.preventDefault();
-    if (e.shiftKey) document.getElementById("btnRedo").click();
-    else document.getElementById("btnUndo").click();
+    if (e.shiftKey) rehacer();
+    else deshacer();
     return;
   }
-  if (ctrl && e.key.toLowerCase() === "y") { e.preventDefault(); document.getElementById("btnRedo").click(); return; }
+  if (ctrl && e.key.toLowerCase() === "y") { e.preventDefault(); rehacer(); return; }
   if (ctrl && (e.key === "=" || e.key === "+")) { e.preventDefault(); cambiarZoom(0.2); return; }
   if (ctrl && e.key === "-") { e.preventDefault(); cambiarZoom(-0.2); return; }
   if (ctrl && e.key === "0") { e.preventDefault(); fitCanvasToViewport(); return; }

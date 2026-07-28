@@ -6,6 +6,9 @@ import json
 import os
 import re
 import subprocess
+import xml.etree.ElementTree as ET
+
+import motores_reparacion as _motores
 
 _SIN_VENTANA = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 
@@ -71,6 +74,54 @@ def detectar_marca(modelo, marca_tag, todos_los_tags_texto):
     return None
 
 
+def _tag_local(elemento):
+    return elemento.tag.split("}", 1)[-1] if "}" in elemento.tag else elemento.tag
+
+
+def _ruta_xml_sidecar(ruta_video):
+    """Las camaras Sony (formato XAVC) suelen dejar un .XML de metadatos al
+    lado de cada clip, con el mismo nombre de archivo mas "M01" (ej.
+    C5727M01.XML junto a C5727.MP4). Si no esta, no pasa nada -- se
+    devuelve None y el resto del flujo simplemente no agrega esa info."""
+    base, _ = os.path.splitext(ruta_video)
+    for candidato in (base + "M01.XML", base + "M01.xml", base + ".XML", base + ".xml"):
+        if os.path.isfile(candidato):
+            return candidato
+    return None
+
+
+def leer_metadata_xml_sony(ruta_video):
+    """Lee el .XML de metadatos "NonRealTimeMeta" que graban las camaras
+    Sony junto al clip (formato XAVC). Devuelve None si no existe el
+    archivo o no se pudo interpretar -- nunca lanza excepcion."""
+    ruta_xml = _ruta_xml_sidecar(ruta_video)
+    if not ruta_xml:
+        return None
+    try:
+        raiz = ET.parse(ruta_xml).getroot()
+    except Exception:
+        return None
+
+    datos = {}
+    for elem in raiz.iter():
+        nombre = _tag_local(elem)
+        if nombre == "Device":
+            datos["marca"] = elem.get("manufacturer")
+            datos["modelo"] = elem.get("modelName")
+        elif nombre == "CreationDate":
+            datos["fecha"] = elem.get("value")
+        elif nombre == "VideoFrame":
+            datos["fps_captura"] = elem.get("captureFps")
+            datos["codec"] = elem.get("videoCodec")
+        elif nombre == "Duration":
+            valor = elem.get("value")
+            if valor and valor.isdigit():
+                datos["fotogramas"] = int(valor)
+        elif nombre == "Item" and elem.get("name") == "CaptureGammaEquation":
+            datos["perfil_color"] = elem.get("value")
+    return datos or None
+
+
 def leer_metadata_camara(ffprobe_bin, ruta_video):
     """Devuelve un dict con los campos detectados (solo los presentes) y 'marca' para el icono.
     No lanza excepcion si no encuentra nada: devuelve un dict con todo en None salvo que ffprobe falle."""
@@ -110,6 +161,8 @@ def leer_metadata_camara(ffprobe_bin, ruta_video):
     audio_stream = next((s for s in datos.get("streams", []) if s.get("codec_type") == "audio"), {})
 
     ancho, alto = video_stream.get("width"), video_stream.get("height")
+    if ancho and alto and _motores._rotacion_normalizada(video_stream) in (90, 270):
+        ancho, alto = alto, ancho  # camara filmada en vertical (ver motores_reparacion._info_basica)
     resolucion = f"{ancho}x{alto}" if ancho and alto else None
 
     fps = None
@@ -133,7 +186,38 @@ def leer_metadata_camara(ffprobe_bin, ruta_video):
     peso_bytes = formato.get("size")
     peso = f"{round(int(peso_bytes) / (1024 * 1024))} MB" if peso_bytes else None
 
+    nb_frames = video_stream.get("nb_frames")
+    fotogramas = int(nb_frames) if nb_frames and str(nb_frames).isdigit() else None
+    if fotogramas is None and duracion_seg and fps:
+        fotogramas = round(float(duracion_seg) * fps)
+
+    pixel_format = video_stream.get("pix_fmt") or ""
+    m_bits = re.search(r"(\d+)(?:le|be)$", pixel_format)
+    bits_color = f"{m_bits.group(1)}-bit" if m_bits else ("8-bit" if pixel_format else None)
+
+    formato_contenedor = formato.get("format_long_name") or formato.get("format_name")
+
+    # El .XML que dejan las camaras Sony al lado del clip (ver
+    # leer_metadata_xml_sony) es mas confiable para marca/modelo/perfil de
+    # color en formatos XAVC, donde ffprobe no siempre encuentra esos tags
+    # dentro del propio video. Si no hay .XML, no cambia nada (sigue como
+    # estaba, solo con lo que trae el propio archivo de video).
+    info_xml = leer_metadata_xml_sony(ruta_video)
+    if info_xml:
+        marca = marca or info_xml.get("marca")
+        modelo = modelo or info_xml.get("modelo")
+        perfil_color = perfil_color or info_xml.get("perfil_color")
+        if info_xml.get("fotogramas"):
+            fotogramas = info_xml["fotogramas"]
+        if info_xml.get("fecha"):
+            # el CreationDate del XML es el inicio real de la grabacion; el
+            # creation_time que a veces trae el propio contenedor de video
+            # puede reflejar otro momento (ej. cuando se termino de escribir
+            # el archivo), asi que el XML tiene prioridad para este campo.
+            fecha = info_xml["fecha"]
+
     return {
+        "nombre_archivo": os.path.basename(ruta_video),
         "modelo": modelo,
         "marca": marca,
         "lente": lente,
@@ -144,12 +228,15 @@ def leer_metadata_camara(ffprobe_bin, ruta_video):
         "fecha": fecha,
         "resolucion": resolucion,
         "duracion": duracion,
+        "fotogramas": fotogramas,
+        "bits_color": bits_color,
+        "formato": formato_contenedor,
         "fps": fps,
         "codec_video": video_stream.get("codec_long_name") or video_stream.get("codec_name"),
         "pixel_format": video_stream.get("pix_fmt"),
         "bitrate": bitrate,
         "peso": peso,
-        "contenedor": formato.get("format_long_name") or formato.get("format_name"),
+        "contenedor": formato_contenedor,
         "codec_audio": audio_stream.get("codec_long_name") or audio_stream.get("codec_name"),
         "audio_canales": audio_stream.get("channels"),
         "audio_sample_rate": (f"{int(audio_stream['sample_rate'])/1000:g} kHz" if audio_stream.get("sample_rate") else None),

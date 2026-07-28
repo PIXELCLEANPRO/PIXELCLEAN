@@ -2,7 +2,7 @@
 ; Empaqueta la build de PyInstaller (dist\PixelClean) en un instalador standalone.
 
 #define MyAppName "PixelClean"
-#define MyAppVersion "1.8"
+#define MyAppVersion "1.9"
 #define MyAppExeName "PixelClean.exe"
 #define MyAppPublisher "PixelClean"
 

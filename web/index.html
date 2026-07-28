@@ -16,9 +16,9 @@
   <symbol id="i-zoomout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></symbol>
   <symbol id="i-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></symbol>
   <symbol id="i-redo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></symbol>
-  <symbol id="i-rotate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
   <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></symbol>
   <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
   <symbol id="i-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
@@ -80,16 +80,14 @@
       <div class="card editor-shell" style="flex:1">
         <div class="toolbar-v" id="toolbarMascara">
           <button class="tool-btn active" data-tool="brush"><svg width="18" height="18"><use href="#i-brush"/></svg><span class="tip">Pincel</span></button>
-          <button class="tool-btn" data-tool="smartbrush"><svg width="18" height="18"><use href="#i-spark"/></svg><span class="tip">Pincel inteligente: pintá grueso, se ajusta solo (prueba)</span></button>
           <button class="tool-btn" data-tool="eraser"><svg width="18" height="18"><use href="#i-eraser"/></svg><span class="tip">Goma</span></button>
           <button class="tool-btn" data-tool="hand"><svg width="18" height="18"><use href="#i-move"/></svg><span class="tip">Mano (pan)</span></button>
           <div class="tool-sep"></div>
-          <button class="tool-btn" id="btnUndo"><svg width="17" height="17"><use href="#i-undo"/></svg><span class="tip">Deshacer</span></button>
-          <button class="tool-btn" id="btnRedo"><svg width="17" height="17"><use href="#i-redo"/></svg><span class="tip">Rehacer</span></button>
-          <button class="tool-btn" id="btnRotate"><svg width="17" height="17"><use href="#i-rotate"/></svg><span class="tip">Rotar 90</span></button>
+          <button class="tool-btn" id="btnRotateLeft"><svg width="17" height="17"><use href="#i-undo"/></svg><span class="tip">Rotar 90° a la izquierda</span></button>
+          <button class="tool-btn" id="btnRotateRight"><svg width="17" height="17"><use href="#i-redo"/></svg><span class="tip">Rotar 90° a la derecha</span></button>
           <div class="tool-sep"></div>
           <button class="tool-btn" id="btnLoadPng"><svg width="17" height="17"><use href="#i-upload"/></svg><span class="tip">Cargar PNG</span></button>
-          <button class="tool-btn" id="btnDetectarAuto"><svg width="17" height="17"><use href="#i-spark"/></svg><span class="tip">Detectar automatico (prueba)</span></button>
+          <button class="tool-btn" id="btnBajarPng"><svg width="17" height="17"><use href="#i-download"/></svg><span class="tip">Bajar mascara como PNG</span></button>
           <div class="tool-sep"></div>
           <div class="tool-pop-wrap">
             <button class="tool-btn" id="btnRealce"><svg width="17" height="17"><use href="#i-sun"/></svg><span class="tip">Resaltar</span></button>
@@ -120,21 +118,14 @@
             </div>
             <div class="options-bar-hint">Alt + click derecho: arrastrar para tamano/dureza</div>
           </div>
-          <div class="options-bar" id="barPerfiles" style="gap:8px">
-            <span class="sf-label" style="align-self:center">Perfil de camara (prueba)</span>
-            <select id="selectPerfiles" style="max-width:220px">
-              <option value="">Sin perfil</option>
-            </select>
-            <button class="btn btn-ghost" id="btnCargarPerfil" style="padding:6px 10px">Cargar</button>
-            <button class="btn btn-ghost" id="btnGuardarPerfil" style="padding:6px 10px">Guardar como...</button>
-            <button class="btn btn-ghost" id="btnBorrarPerfil" style="padding:6px 10px">Borrar</button>
-            <span class="options-bar-hint" id="perfilesMsg"></span>
-          </div>
-          <div class="options-bar-hint" id="smartBrushMsg" style="display:none;padding:4px 12px"></div>
           <div class="canvas-viewport" id="viewportMascara">
             <div class="canvas-stage" id="stageMascara">
               <video id="videoFrame" muted playsinline preload="auto"></video>
               <canvas id="cnvMask"></canvas>
+            </div>
+            <div class="viewport-loading" id="viewportLoading" style="display:none">
+              <div class="spinner"></div>
+              <span>Cargando vista previa...</span>
             </div>
             <div class="zoom-hud">
               <button id="hudZoomOut"><svg width="14" height="14"><use href="#i-zoomout"/></svg></button>
@@ -165,8 +156,10 @@
             <div class="info"><div class="title">OpenCV inpainting</div><div class="desc">Reconstruye bordes y textura</div></div>
             <div class="tag">Recomendado</div>
           </div>
-          <label style="font-size:11.5px;color:var(--text-2)">Intensidad del blur</label>
-          <input type="range" id="sliderSigma" min="1" max="40" value="15" style="width:100%;margin-top:6px">
+          <div id="grupoSigma" style="display:none">
+            <label style="font-size:11.5px;color:var(--text-2)">Intensidad del blur</label>
+            <input type="range" id="sliderSigma" min="1" max="40" value="15" style="width:100%;margin-top:6px">
+          </div>
         </div>
         <div>
           <div class="section-title">Calidad y peso</div>
@@ -182,6 +175,14 @@
             <option>1080p (1920x1080)</option>
             <option>720p (1280x720)</option>
           </select>
+        </div>
+        <div>
+          <div class="section-title">Carpeta de exportacion</div>
+          <div class="nav-info" id="lblCarpetaSalida" style="margin-bottom:6px;word-break:break-all">Predeterminada: junto al medio original, en una carpeta "PixelClean".</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost" id="btnElegirCarpetaSalida" style="flex:1">Elegir carpeta...</button>
+            <button class="btn btn-ghost" id="btnRestablecerCarpetaSalida" style="display:none">Restablecer</button>
+          </div>
         </div>
       </div>
       <div class="resizer" id="resizerMotor"></div>
@@ -213,7 +214,10 @@
           <p id="previewRenderPlaceholder" class="nav-info">Se va a ir viendo aca, en baja calidad, mientras se procesa.</p>
         </div>
       </div>
+      <div class="resizer" id="resizerProcesar"></div>
       <div class="card log-col">
+        <div class="section-title">Archivos</div>
+        <div class="archivos-proceso-list" id="archivosProcesoList"></div>
         <div class="log-box" id="logBox"></div>
       </div>
     </div>

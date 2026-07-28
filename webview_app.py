@@ -12,6 +12,7 @@ import logging
 import mimetypes
 import os
 import sys
+import tempfile
 import threading
 import time
 import traceback
@@ -22,7 +23,6 @@ import numpy as np
 import webview
 from PIL import Image, ImageFilter
 
-import deteccion_automatica
 import metadata_camara
 import motores_reparacion as motores
 from webview.dom import DOMEventHandler
@@ -49,7 +49,6 @@ FFPROBE_BIN = _ruta_local("ffprobe.exe") if os.name == "nt" else _ruta_local("ff
 CARPETA_WEB = os.path.join(_carpeta_base(), "web")
 
 GREEN_THRESHOLD = 40
-OUTPUT_SUFFIX = "_reparado"
 
 PRESETS_VELOCIDAD = {
     "Rapido":      {"preset": "ultrafast", "crf": 18},
@@ -66,7 +65,7 @@ RESOLUCIONES = {
 LICENCIA_HASH_PRO = "ab45d00dee70232649d49b004f952ecb6c0ae0a00663c15f5d7b4c2a3929d071"
 LIMITE_GRATIS_DIARIO = 5
 
-VERSION_APP = "1.8.0"
+VERSION_APP = "1.9.0"
 URL_ULTIMA_VERSION = "https://api.github.com/repos/PIXELCLEANPRO/PIXELCLEAN/releases/latest"
 URL_PAGINA_DESCARGA = "https://pixelclean-app.netlify.app"
 
@@ -96,19 +95,22 @@ def _ruta_datos_usuario(nombre_archivo):
     return os.path.join(_carpeta_datos_app(), nombre_archivo)
 
 
-def _carpeta_perfiles_usuario():
-    # A diferencia del resto de los datos de la app (config tecnica, cache de
-    # WebView2, etc.), los perfiles de camara son algo que el usuario arma a
-    # mano y espera encontrar/hacer backup facil -- se guardan en Documentos
-    # en vez de la carpeta tecnica escondida (%LOCALAPPDATA%), que a nadie se
-    # le ocurre revisar.
-    carpeta = os.path.join(os.path.expanduser("~"), "Documents", "PixelClean")
-    os.makedirs(carpeta, exist_ok=True)
-    return carpeta
+def _leer_carpeta_salida_personalizada():
+    """Carpeta base (elegida por el usuario) donde crear la subcarpeta
+    "PixelClean" de exportacion, en vez de la ubicacion por defecto (junto
+    al medio original). None si no se configuro ninguna, o si la que se
+    habia elegido ya no existe (ej. se desconecto un disco externo)."""
+    try:
+        with open(_ruta_datos_usuario("config.json"), "r", encoding="utf-8") as f:
+            carpeta = json.load(f).get("carpeta_salida")
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+    return carpeta if carpeta and os.path.isdir(carpeta) else None
 
 
-def _ruta_perfiles_camara():
-    return os.path.join(_carpeta_perfiles_usuario(), "perfiles_camara.json")
+def _guardar_carpeta_salida_personalizada(carpeta):
+    with open(_ruta_datos_usuario("config.json"), "w", encoding="utf-8") as f:
+        json.dump({"carpeta_salida": carpeta}, f)
 
 
 def _pil_a_b64(img, formato="PNG"):
@@ -120,6 +122,36 @@ def _pil_a_b64(img, formato="PNG"):
 def _b64_a_pil(data_url):
     _, _, datos = data_url.partition(",")
     return Image.open(io.BytesIO(base64.b64decode(datos)))
+
+
+def _adaptar_mascara_a_clip(mascara_rgba, ancho_clip, alto_clip):
+    """Adapta la mascara "de referencia" (dibujada sobre el frame de
+    muestra) a la orientacion y resolucion reales de cada clip del lote.
+    Misma camara puede haber filmado algunas tomas horizontales y otras
+    verticales (o en otra resolucion) -- si no se corrige esto, la mascara
+    queda girada o corrida de lugar en los clips que no coinciden con el
+    frame sobre el que se pinto originalmente.
+    Devuelve (mascara_adaptada, descripcion_rotacion_o_None)."""
+    if not ancho_clip or not alto_clip:
+        return mascara_rgba, None
+    ancho_ref, alto_ref = mascara_rgba.size
+    vertical_ref = alto_ref > ancho_ref
+    vertical_clip = alto_clip > ancho_clip
+    descripcion = None
+    if vertical_ref != vertical_clip:
+        if vertical_clip:
+            # referencia horizontal, clip vertical: la camara se giro hacia
+            # la izquierda para filmar en vertical -> se rota la mascara
+            # 90 grados en sentido antihorario para que seguir el mismo giro.
+            mascara_rgba = mascara_rgba.transpose(Image.ROTATE_90)
+            descripcion = "90 grados a la izquierda"
+        else:
+            # referencia vertical, clip horizontal: giro opuesto.
+            mascara_rgba = mascara_rgba.transpose(Image.ROTATE_270)
+            descripcion = "90 grados a la derecha"
+    if mascara_rgba.size != (ancho_clip, alto_clip):
+        mascara_rgba = mascara_rgba.resize((ancho_clip, alto_clip))
+    return mascara_rgba, descripcion
 
 
 def reparar_crop_preview(motor_id, crop_rgb, mascara_crop_u8, sigma_blur=15):
@@ -310,6 +342,21 @@ class Api:
         )
         return list(archivos) if archivos else []
 
+    def obtener_carpeta_salida(self):
+        return {"carpeta": _leer_carpeta_salida_personalizada()}
+
+    def elegir_carpeta_salida(self):
+        resultado = self._ventana.create_file_dialog(webview.FOLDER_DIALOG)
+        if not resultado:
+            return {"carpeta": _leer_carpeta_salida_personalizada()}
+        carpeta = resultado[0]
+        _guardar_carpeta_salida_personalizada(carpeta)
+        return {"carpeta": carpeta}
+
+    def restablecer_carpeta_salida(self):
+        _guardar_carpeta_salida_personalizada(None)
+        return {"carpeta": None}
+
     def obtener_frame_y_metadata(self, ruta_clip):
         try:
             info_meta = metadata_camara.leer_metadata_camara(FFPROBE_BIN, ruta_clip)
@@ -334,6 +381,16 @@ class Api:
             }
         except Exception as e:
             return {"frame_b64": None, "ancho": 0, "alto": 0, "metadata": info_meta or {}, "duracion_seg": 0, "error": str(e)}
+
+    def obtener_metadata_clip(self, ruta_clip):
+        """Metadata de un clip puntual de la lista, sin tocar self._frame_actual
+        (que es el cuadro "de referencia" sobre el que se pinta la mascara) --
+        para poder mostrar la info de cualquier clip que el usuario elija ver
+        sin afectar el flujo de mascara/render."""
+        try:
+            return {"metadata": metadata_camara.leer_metadata_camara(FFPROBE_BIN, ruta_clip) or {}}
+        except Exception as e:
+            return {"metadata": {}, "error": str(e)}
 
     def obtener_frame_en(self, ruta_clip, segundo):
         """Pide el cuadro de un instante puntual del clip (para el scrubber del
@@ -378,91 +435,23 @@ class Api:
         except Exception:
             return None
 
-    # ---------- batch inteligente: deteccion automatica ----------
-    def detectar_mascara_auto(self, ruta_clip):
+    def guardar_mascara_png(self, mascara_b64, nombre_sugerido=None):
+        archivo = self._ventana.create_file_dialog(
+            webview.SAVE_DIALOG, save_filename=(nombre_sugerido or "mascara") + ".png",
+            file_types=("Imagen PNG (*.png)",),
+        )
+        if not archivo:
+            return {"ok": False}
+        ruta = archivo if isinstance(archivo, str) else archivo[0]
         try:
-            info = motores._info_basica(FFPROBE_BIN, ruta_clip)
-            ok, rgba, mensaje = deteccion_automatica.detectar_mascara_automatica(
-                FFMPEG_BIN, ruta_clip, info.get("duracion_seg"))
-            if not ok:
-                return {"ok": False, "error": mensaje}
-            tamano = self._frame_actual.size if self._frame_actual is not None else (rgba.shape[1], rgba.shape[0])
-            salida = Image.fromarray(rgba, mode="RGBA").resize(tamano)
-            return {"ok": True, "mascara_b64": _pil_a_b64(salida), "mensaje": mensaje}
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
-
-    # ---------- pincel inteligente: el usuario pinta mas o menos, se afina solo ----------
-    def refinar_pincel_inteligente(self, ruta_clip, x0, y0, x1, y1):
-        try:
-            info = motores._info_basica(FFPROBE_BIN, ruta_clip)
-            bbox = (int(x0), int(y0), int(x1), int(y1))
-            ok, rgba, mensaje = deteccion_automatica.refinar_seleccion_por_contraste(
-                FFMPEG_BIN, ruta_clip, info.get("duracion_seg"), bbox)
-            if not ok:
-                return {"ok": False, "error": mensaje}
-            return {
-                "ok": True, "mascara_b64": _pil_a_b64(Image.fromarray(rgba, mode="RGBA")),
-                "x0": bbox[0], "y0": bbox[1], "x1": bbox[2], "y1": bbox[3], "mensaje": mensaje,
-            }
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
-
-    # ---------- perfiles guardados por camara (el usuario les pone nombre a mano) ----------
-    def _leer_perfiles_camara(self):
-        # migra el archivo viejo (guardado por error en la carpeta tecnica
-        # escondida en versiones anteriores) la primera vez que lo encuentra.
-        ruta_nueva = _ruta_perfiles_camara()
-        if not os.path.isfile(ruta_nueva):
-            ruta_vieja = _ruta_datos_usuario("perfiles_camara.json")
-            if os.path.isfile(ruta_vieja):
-                try:
-                    with open(ruta_vieja, "r", encoding="utf-8") as f:
-                        datos_viejos = f.read()
-                    with open(ruta_nueva, "w", encoding="utf-8") as f:
-                        f.write(datos_viejos)
-                except Exception:
-                    pass
-        try:
-            with open(ruta_nueva, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return {}
-
-    def _guardar_perfiles_camara(self, perfiles):
-        with open(_ruta_perfiles_camara(), "w", encoding="utf-8") as f:
-            json.dump(perfiles, f)
-
-    def listar_perfiles_camara(self):
-        return sorted(self._leer_perfiles_camara().keys())
-
-    def guardar_perfil_camara(self, nombre, mascara_b64, motor, sigma):
-        nombre = (nombre or "").strip()
-        if not nombre:
-            return {"ok": False, "error": "Poné un nombre para el perfil."}
-        try:
-            perfiles = self._leer_perfiles_camara()
-            perfiles[nombre] = {
-                "mascara_b64": mascara_b64, "motor": motor, "sigma": sigma,
-                "creado": datetime.date.today().isoformat(),
-            }
-            self._guardar_perfiles_camara(perfiles)
-            return {"ok": True}
-        except Exception as e:
-            return {"ok": False, "error": str(e)}
-
-    def cargar_perfil_camara(self, nombre):
-        perfil = self._leer_perfiles_camara().get(nombre)
-        if not perfil:
-            return {"ok": False, "error": "No existe ese perfil."}
-        return {"ok": True, **perfil}
-
-    def borrar_perfil_camara(self, nombre):
-        try:
-            perfiles = self._leer_perfiles_camara()
-            perfiles.pop(nombre, None)
-            self._guardar_perfiles_camara(perfiles)
-            return {"ok": True}
+            # Se exporta en blanco y negro puro (segun el canal alfa: pintado
+            # = blanco, sin pintar = negro) en vez del azul con transparencia
+            # que se usa en pantalla -- asi al volver a importarla no depende
+            # de ninguna heuristica de color, es directo y sin ambiguedad.
+            alfa = np.asarray(_b64_a_pil(mascara_b64).convert("RGBA"))[..., 3]
+            blanco_y_negro = np.where(alfa > 0, 255, 0).astype(np.uint8)
+            Image.fromarray(blanco_y_negro, mode="L").save(ruta)
+            return {"ok": True, "ruta": ruta}
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
@@ -506,8 +495,12 @@ class Api:
                     return {"ok": False, "error": "limite_gratis", "restantes": restantes, "limite": LIMITE_GRATIS_DIARIO}
             self._evento_cancelar.clear()
             with self._progreso_lock:
-                self.progreso = {"completados": 0, "total": total, "por_clip": [0.0] * total,
-                                  "logs": [], "terminado": False}
+                self.progreso = {
+                    "completados": 0, "total": total, "por_clip": [0.0] * total,
+                    "nombres": [os.path.basename(c) for c in payload["clips"]],
+                    "rutas_salida": [None] * total,
+                    "logs": [], "terminado": False,
+                }
             threading.Thread(target=self._procesar_todo_worker, args=(payload,), daemon=True).start()
             return {"ok": True}
         except Exception as e:
@@ -520,6 +513,21 @@ class Api:
         self._evento_cancelar.set()
         self._agregar_log("Cancelando... (se corta al terminar el paso actual del clip en curso)", False)
         return {"ok": True}
+
+    def mostrar_en_carpeta(self, ruta):
+        try:
+            import subprocess
+            if not os.path.isfile(ruta):
+                return {"ok": False, "error": "El archivo ya no esta ahi."}
+            if os.name == "nt":
+                subprocess.run(["explorer", "/select," + ruta], creationflags=subprocess.CREATE_NO_WINDOW)
+            elif sys.platform == "darwin":
+                subprocess.run(["open", "-R", ruta])
+            else:
+                subprocess.run(["xdg-open", os.path.dirname(ruta)])
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
 
     def _agregar_log(self, mensaje, ok):
         with self._progreso_lock:
@@ -583,13 +591,19 @@ class Api:
     def _procesar_todo_worker(self, payload):
         clips = payload["clips"]
         try:
-            carpeta_salida = os.path.join(os.path.dirname(clips[0]), "reparados")
-            os.makedirs(carpeta_salida, exist_ok=True)
+            # Por defecto cada clip se exporta a una carpeta "PixelClean"
+            # junto al medio original (asi si el lote mezcla clips de
+            # distintas carpetas, cada uno sale al lado del suyo). Si el
+            # usuario eligio una carpeta fija (ver elegir_carpeta_salida),
+            # esa se usa para todo el lote en cambio.
+            carpeta_salida_fija = _leer_carpeta_salida_personalizada()
 
+            # Mascara "de referencia", tal como se dibujo sobre el frame de
+            # muestra (que puede ser horizontal o vertical). Cada clip del
+            # lote puede tener otra orientacion/resolucion (misma camara,
+            # pero algunas tomas horizontales y otras verticales, o
+            # resoluciones distintas) -- eso se adapta por clip mas abajo.
             mascara_rgba = _b64_a_pil(payload["mascara_b64"]).convert("RGBA").resize(self._frame_actual.size)
-            mascara_l = Image.fromarray(np.asarray(mascara_rgba)[..., 3], mode="L")
-            mascara_bn_path = os.path.join(carpeta_salida, "_mascara_bn.png")
-            mascara_l.save(mascara_bn_path)
 
             motor_gpu = self._detectar_motor_gpu()
             nombres_gpu = {"nvenc": "NVIDIA (NVENC)", "qsv": "Intel Quick Sync", "amf": "AMD (AMF)",
@@ -612,19 +626,55 @@ class Api:
                 if self._evento_cancelar.is_set():
                     self._agregar_log("Cancelado por el usuario.", False)
                     break
+                carpeta_base = carpeta_salida_fija or os.path.dirname(clip)
+                carpeta_salida = os.path.join(carpeta_base, "PixelClean")
+                os.makedirs(carpeta_salida, exist_ok=True)
                 nombre = os.path.splitext(os.path.basename(clip))[0]
                 ext = os.path.splitext(clip)[1] or ".mp4"
-                ruta_salida = os.path.join(carpeta_salida, nombre + OUTPUT_SUFFIX + ext)
+                ruta_salida = os.path.join(carpeta_salida, nombre + ext)
 
-                mascara_rgba_arr = np.asarray(mascara_rgba)
+                info_clip = motores._info_basica(FFPROBE_BIN, clip)
+                ancho_clip, alto_clip = info_clip.get("ancho"), info_clip.get("alto")
+                mascara_clip, roto = _adaptar_mascara_a_clip(mascara_rgba, ancho_clip, alto_clip)
+                if roto:
+                    self._agregar_log(
+                        f"{os.path.basename(clip)}: orientacion distinta a la de referencia, "
+                        f"rotando la mascara ({roto}).", True)
+                mascara_l = Image.fromarray(np.asarray(mascara_clip)[..., 3], mode="L")
+                # La mascara en blanco y negro solo hace falta mientras dura el
+                # render de este clip (los motores la leen del disco) -- no
+                # tiene sentido dejarla al lado del video ya exportado, asi que
+                # se guarda en una carpeta temporal y se borra apenas termina
+                # este clip (haya salido bien o mal).
+                mascara_bn_path = os.path.join(
+                    tempfile.gettempdir(), f"_pixelclean_mascara_{os.getpid()}_{idx}.png")
+                mascara_l.save(mascara_bn_path)
+                mascara_rgba_arr = np.asarray(mascara_clip)
 
                 def callback(frac, i=idx, clip=clip):
                     with self._progreso_lock:
                         self.progreso["por_clip"][i] = frac
                     self._actualizar_preview_render(clip, frac, payload["motor"], mascara_rgba_arr, payload["sigma"])
 
-                exito, resultado = motor_fn(FFMPEG_BIN, FFPROBE_BIN, clip, mascara_bn_path, ruta_salida,
-                                             parametros, callback)
+                try:
+                    exito, resultado = motor_fn(FFMPEG_BIN, FFPROBE_BIN, clip, mascara_bn_path, ruta_salida,
+                                                 parametros, callback)
+                    if not exito and parametros["motor_gpu"] and resultado != "Cancelado por el usuario.":
+                        # El encoder de GPU puede rechazar un clip puntual por
+                        # motivos que el mini-render de deteccion no cubre
+                        # (resolucion, formato, etc.) -- en vez de perder el
+                        # clip entero, se reintenta ese clip por CPU antes de
+                        # darlo por fallido.
+                        self._agregar_log(
+                            f"{os.path.basename(clip)}: fallo el encoder de GPU, reintentando por CPU...", False)
+                        parametros_cpu = dict(parametros, motor_gpu=None)
+                        exito, resultado = motor_fn(FFMPEG_BIN, FFPROBE_BIN, clip, mascara_bn_path, ruta_salida,
+                                                     parametros_cpu, callback)
+                finally:
+                    try:
+                        os.remove(mascara_bn_path)
+                    except OSError:
+                        pass
                 mensaje = (f"OK: {os.path.basename(clip)} -> {os.path.basename(resultado)}" if exito
                            else f"ERROR: {os.path.basename(clip)} -> {resultado}")
                 self._agregar_log(mensaje, exito)
@@ -632,8 +682,14 @@ class Api:
                     self._incrementar_uso(1)
                 with self._progreso_lock:
                     self.progreso["completados"] = idx + 1
+                    self.progreso["por_clip"][idx] = 1.0
+                    if exito:
+                        self.progreso["rutas_salida"][idx] = resultado
 
-            self._agregar_log(f"Listo. Carpeta de salida: {carpeta_salida}", True)
+            if carpeta_salida_fija:
+                self._agregar_log(f"Listo. Carpeta de salida: {carpeta_salida}", True)
+            else:
+                self._agregar_log('Listo. Cada clip se exporto en una carpeta "PixelClean" junto al original.', True)
         except Exception:
             self._agregar_log("ERROR inesperado:\n" + traceback.format_exc(), False)
         finally:
@@ -648,6 +704,45 @@ class Api:
                 descarga_url = self._actualizacion.get("descarga_url")
             if pendiente:
                 self._descargar_e_instalar(descarga_url)
+
+
+def _personalizar_titlebar_windows(titulo_ventana):
+    """Pinta la barra de titulo nativa de Windows (fondo, texto y borde) del
+    mismo color oscuro que usa la app por defecto, en vez del blanco/gris de
+    Windows. La API de Windows (DWM) solo permite un color solido para esto,
+    no un degradado -- eso requeriria sacar el marco nativo por completo y
+    dibujar una barra de titulo propia en HTML, un cambio mucho mas grande.
+    Silenciosamente no hace nada en versiones de Windows que no lo soporten
+    (hace falta Windows 11 22H2 o mas nuevo para el color de la barra; en
+    versiones anteriores de Windows 10/11 como mucho se pone en "modo oscuro"
+    generico)."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        hwnd = None
+        for _ in range(100):  # hasta ~10s por si la ventana nativa todavia no existe
+            hwnd = ctypes.windll.user32.FindWindowW(None, titulo_ventana)
+            if hwnd:
+                break
+            time.sleep(0.1)
+        if not hwnd:
+            return
+        dwmapi = ctypes.windll.dwmapi
+        DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+        DWMWA_BORDER_COLOR = 34
+        DWMWA_CAPTION_COLOR = 35
+        DWMWA_TEXT_COLOR = 36
+        oscuro = ctypes.c_int(1)
+        dwmapi.DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ctypes.byref(oscuro), ctypes.sizeof(oscuro))
+        # COLORREF de Windows es 0x00BBGGRR, al reves de un hex web normal.
+        color_fondo = ctypes.c_int(0x00100C0A)  # #0a0c10 (fondo oscuro por defecto de la app)
+        color_texto = ctypes.c_int(0x00F7F3F2)  # #f2f3f7 (texto claro por defecto de la app)
+        dwmapi.DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ctypes.byref(color_fondo), ctypes.sizeof(color_fondo))
+        dwmapi.DwmSetWindowAttribute(hwnd, DWMWA_TEXT_COLOR, ctypes.byref(color_texto), ctypes.sizeof(color_texto))
+        dwmapi.DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ctypes.byref(color_fondo), ctypes.sizeof(color_fondo))
+    except Exception:
+        logging.getLogger().exception("No se pudo personalizar la barra de titulo")
 
 
 def _iniciar_servidor(api):
@@ -768,13 +863,15 @@ def main():
     api = Api()
     threading.Thread(target=api._revisar_actualizacion_en_fondo, daemon=True).start()
     puerto = _iniciar_servidor(api)
+    titulo_ventana = "PixelClean - Reparador de pixeles quemados"
     ventana = webview.create_window(
-        "PixelClean - Reparador de pixeles quemados",
+        titulo_ventana,
         f"http://127.0.0.1:{puerto}/index.html",
         js_api=api, width=1280, height=820, min_size=(1040, 700),
         background_color="#0b0d12",
     )
     api.set_ventana(ventana)
+    threading.Thread(target=_personalizar_titlebar_windows, args=(titulo_ventana,), daemon=True).start()
 
     def _al_soltar_archivos(e):
         # El navegador nunca expone la ruta real de un archivo soltado por
