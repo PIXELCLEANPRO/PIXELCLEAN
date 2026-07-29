@@ -208,6 +208,22 @@
   details.faq-item[open] summary::after { content: "−"; }
   details.faq-item p { color: var(--ink-soft); font-size: 15px; margin-top: 10px; max-width: 62ch; }
 
+  /* ---------- changelog ---------- */
+  .changelog { display: flex; flex-direction: column; gap: 14px; max-width: 760px; }
+  details.changelog-item { border-radius: var(--r-md); padding: 18px 22px; }
+  details.changelog-item summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 12px; }
+  details.changelog-item summary::-webkit-details-marker { display: none; }
+  details.changelog-item .cl-ver { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--signal); border: 1px solid var(--glass-border); border-radius: 999px; padding: 3px 10px; flex-shrink: 0; }
+  details.changelog-item .cl-latest { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--stuck); border: 1px solid color-mix(in srgb, var(--stuck) 45%, transparent); border-radius: 999px; padding: 3px 8px; flex-shrink: 0; }
+  details.changelog-item .cl-title { font-family: var(--font-display); font-weight: 650; font-size: 15px; flex: 1; }
+  details.changelog-item .cl-date { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); flex-shrink: 0; }
+  details.changelog-item summary::after { content: "+"; font-size: 18px; color: var(--signal); flex-shrink: 0; }
+  details.changelog-item[open] summary::after { content: "−"; }
+  details.changelog-item .cl-body { color: var(--ink-soft); font-size: 14.5px; margin-top: 14px; max-width: 64ch; }
+  details.changelog-item .cl-body ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; }
+  details.changelog-item .cl-body p { margin: 8px 0 0; }
+  details.changelog-item .cl-body strong { color: var(--ink); }
+
   footer { padding: 40px 0 60px; border-top: 1px solid var(--glass-border); margin-top: 20px; }
   .foot-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
   .foot-links { display: flex; gap: 24px; font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint); }
@@ -238,16 +254,30 @@
       <p class="lede">Es un programa chico hecho por un desarrollador independiente, sin firma digital paga — por eso Windows y macOS muestran una advertencia la primera vez. Acá te mostramos exactamente qué apretar.</p>
 
       <div class="download-ctas" id="descargar">
-        <a class="btn btn-primary btn-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/latest/download/PixelClean_Setup.exe" download>
+        <a class="btn btn-primary btn-download" href="https://github.com/PIXELCLEANPRO/pixelcleanpro.github.io/releases/latest/download/PixelClean_Setup.exe" download>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5L10.5 4.4V11.4H3V5.5ZM11.3 4.3L21 3V11.3H11.3V4.3ZM3 12.2H10.5V19.2L3 18.1V12.2ZM11.3 12.2H21V20.6L11.3 19.3V12.2Z"/></svg>
           <span class="lbl">Descargar para Windows<small>.exe · Windows 10/11</small></span>
         </a>
-        <a class="btn btn-ghost btn-download" href="https://github.com/PIXELCLEANPRO/PIXELCLEAN/releases/latest/download/PixelClean_Mac.dmg" download>
+        <a class="btn btn-ghost btn-download" href="https://github.com/PIXELCLEANPRO/pixelcleanpro.github.io/releases/latest/download/PixelClean_Mac.dmg" download>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.463 2.075-1.24 2.816-.837.79-2.147 1.4-3.19 1.31-.15-1.1.416-2.24 1.19-2.95.83-.76 2.24-1.32 3.24-1.176zM20.5 17.35c-.55 1.26-.81 1.82-1.52 2.94-.99 1.56-2.39 3.5-4.13 3.52-1.54.02-1.94-1-4.03-.98-2.1.02-2.53 1-4.07.98-1.74-.02-3.06-1.77-4.05-3.33C-.35 16.5-.71 11.9 1.13 9.2c1.1-1.6 2.83-2.6 4.45-2.6 1.66 0 2.7 1.02 4.07 1.02 1.33 0 2.14-1.02 4.07-1.02 1.44 0 2.97.79 4.06 2.15-3.57 1.96-2.99 6.94 1.72 8.6z"/></svg>
           <span class="lbl">Descargar para macOS<small>.dmg · macOS 12+</small></span>
         </a>
       </div>
       <p class="download-note">Versión gratis · hasta 5 clips por día · todas las funciones incluidas</p>
+      <p class="download-note" id="versionNote">Consultando la última versión disponible…</p>
+    </div>
+  </section>
+
+  <section class="section" id="novedades">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Changelog</span>
+        <h2>Qué cambió últimamente</h2>
+        <p>Las últimas actualizaciones de PixelClean, tal cual figuran en los releases del proyecto.</p>
+      </div>
+      <div class="changelog" id="changelogList">
+        <p style="color:var(--ink-soft);font-size:15px">Cargando novedades…</p>
+      </div>
     </div>
   </section>
 
@@ -361,7 +391,7 @@
         </details>
         <details class="faq-item">
           <summary>¿Puedo ver el código fuente antes de confiar?</summary>
-          <p>Sí, el proyecto es público en GitHub: <a href="https://github.com/PIXELCLEANPRO/PIXELCLEAN" target="_blank" rel="noopener" style="color:var(--signal)">github.com/PIXELCLEANPRO/PIXELCLEAN</a>.</p>
+          <p>Sí, el proyecto es público en GitHub: <a href="https://github.com/PIXELCLEANPRO/pixelcleanpro.github.io" target="_blank" rel="noopener" style="color:var(--signal)">github.com/PIXELCLEANPRO/pixelcleanpro.github.io</a>.</p>
         </details>
       </div>
     </div>
@@ -378,3 +408,85 @@
     </nav>
   </div>
 </footer>
+
+<script>
+(function () {
+  var REPO = "PIXELCLEANPRO/pixelcleanpro.github.io";
+  var verNote = document.getElementById("versionNote");
+  var list = document.getElementById("changelogList");
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; });
+  }
+
+  // Convierte el markdown simple de los release notes (##, -, **negrita**) a HTML.
+  function mdToHtml(md) {
+    var lines = md.replace(/\r\n/g, "\n").split("\n");
+    var html = "";
+    var inList = false;
+    function closeList() { if (inList) { html += "</ul>"; inList = false; } }
+    lines.forEach(function (line) {
+      line = line.trim();
+      if (!line) return;
+      if (/^#{1,3}\s+/.test(line)) {
+        closeList();
+        html += "<p><strong>" + escapeHtml(line.replace(/^#{1,3}\s+/, "")) + "</strong></p>";
+        return;
+      }
+      if (/^-\s+/.test(line)) {
+        if (!inList) { html += "<ul>"; inList = true; }
+        var item = escapeHtml(line.replace(/^-\s+/, "")).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        html += "<li>" + item + "</li>";
+        return;
+      }
+      closeList();
+      var p = escapeHtml(line).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      html += "<p>" + p + "</p>";
+    });
+    closeList();
+    return html;
+  }
+
+  function formatDate(iso) {
+    try {
+      return new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+    } catch (e) { return ""; }
+  }
+
+  fetch("https://api.github.com/repos/" + REPO + "/releases?per_page=6")
+    .then(function (r) { if (!r.ok) throw new Error("bad status"); return r.json(); })
+    .then(function (releases) {
+      releases = releases.filter(function (r) { return !r.draft; });
+      if (!releases.length) throw new Error("no releases");
+
+      var latest = releases[0];
+      if (verNote) {
+        verNote.innerHTML = "Vas a descargar la versión <strong style=\"color:var(--ink)\">" +
+          escapeHtml(latest.tag_name) + "</strong> (" + formatDate(latest.published_at) + ")";
+      }
+
+      if (list) {
+        list.innerHTML = "";
+        releases.slice(0, 5).forEach(function (rel, i) {
+          var det = document.createElement("details");
+          det.className = "changelog-item glass";
+          if (i === 0) det.open = true;
+          var badge = i === 0 ? '<span class="cl-latest">Última</span>' : "";
+          det.innerHTML =
+            '<summary>' +
+              '<span class="cl-ver">' + escapeHtml(rel.tag_name) + '</span>' +
+              badge +
+              '<span class="cl-title">' + escapeHtml((rel.name || rel.tag_name).replace(/^PixelClean\s*/i, "")) + '</span>' +
+              '<span class="cl-date">' + formatDate(rel.published_at) + '</span>' +
+            '</summary>' +
+            '<div class="cl-body">' + mdToHtml(rel.body || "Sin notas para esta versión.") + '</div>';
+          list.appendChild(det);
+        });
+      }
+    })
+    .catch(function () {
+      if (verNote) verNote.textContent = "Descargás siempre la última versión disponible.";
+      if (list) list.innerHTML = '<p style="color:var(--ink-soft);font-size:15px">No se pudo cargar el historial de versiones ahora mismo — se puede ver directo en <a href="https://github.com/' + REPO + '/releases" target="_blank" rel="noopener" style="color:var(--signal)">GitHub</a>.</p>';
+    });
+})();
+</script>
