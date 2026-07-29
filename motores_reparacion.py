@@ -247,7 +247,14 @@ def _pipeline_por_frame(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ru
     cmd_encode = [
         ffmpeg_bin, "-y", "-hide_banner", "-loglevel", "error",
         "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{ancho}x{alto}", "-r", str(fps), "-i", "pipe:0",
-        *codec_args, "-threads", "0",
+        # Sin forzar el formato de salida, libx264 puede terminar
+        # codificando directo en RGB (perfil "High 4:4:4 Predictive",
+        # pix_fmt gbrp) en vez de convertir al YUV 4:2:0 estandar -- casi
+        # ningun reproductor tiene decodificador por hardware para eso, asi
+        # que cae a software y el video se ve como en camara lenta (la PC
+        # no llega a decodificarlo en tiempo real). yuv420p es el formato
+        # universalmente compatible que espera cualquier reproductor.
+        *codec_args, "-pix_fmt", "yuv420p", "-threads", "0",
         ruta_video_tmp,
     ]
 
