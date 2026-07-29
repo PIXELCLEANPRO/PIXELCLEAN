@@ -5,6 +5,7 @@ const state = {
   step: 0,
   theme: "dark",
   clips: [],
+  clipReferencia: null,
   frameImg: null,
   frameW: 1280, frameH: 720,
   duracionSeg: 0,
@@ -348,17 +349,24 @@ async function quitarClip(indice) {
   state.clips.splice(indice, 1);
   if (_clipSeleccionado >= state.clips.length) _clipSeleccionado = Math.max(0, state.clips.length - 1);
   renderizarListaClips();
+  renderizarSelectorReferencia();
   if (!state.clips.length) {
     state.frameImg = null;
+    state.clipReferencia = null;
     videoFrame.removeAttribute("src");
     document.getElementById("brandBadge").querySelector("span").textContent = "Sin datos de camara";
     document.getElementById("metaFields").innerHTML = "";
     return;
   }
-  const datos = await api.obtener_frame_y_metadata(state.clips[0]);
-  state.duracionSeg = datos.duracion_seg || 0;
-  cargarFrameMuestra(datos);
-  _metaCache[state.clips[0]] = {metadata: datos.metadata};
+  if (ruta === state.clipReferencia) {
+    // el clip que se uso como referencia para pintar la mascara se quito
+    // de la lista -- cae al primero que quede, como al cargar por primera vez.
+    const datos = await api.obtener_frame_y_metadata(state.clips[0]);
+    state.clipReferencia = state.clips[0];
+    state.duracionSeg = datos.duracion_seg || 0;
+    cargarFrameMuestra(datos);
+    _metaCache[state.clips[0]] = {metadata: datos.metadata};
+  }
   mostrarInfoClip(_clipSeleccionado);
 }
 
@@ -368,6 +376,7 @@ async function establecerClips(archivos) {
   _clipSeleccionado = 0;
   state.frameImg = null; // hasta que cargarFrameMuestra confirme el nuevo cuadro, el visor de Mascara no tiene nada listo para mostrar
   renderizarListaClips();
+  renderizarSelectorReferencia();
   document.getElementById("metaFields").innerHTML = `<div class="meta-field"><span class="k">Leyendo datos del archivo...</span></div>`;
   // se prende ya (no recien cuando termine de leer los datos) para que si el
   // usuario pasa al paso Mascara mientras esto todavia esta cargando, no se
@@ -375,11 +384,39 @@ async function establecerClips(archivos) {
   // cargando.
   document.getElementById("viewportLoading").style.display = "flex";
   const datos = await api.obtener_frame_y_metadata(archivos[0]);
+  state.clipReferencia = archivos[0];
   state.duracionSeg = datos.duracion_seg || 0;
   cargarFrameMuestra(datos);
   _metaCache[archivos[0]] = {metadata: datos.metadata};
   mostrarInfoClip(0);
 }
+
+/* ---------------- Elegir que clip usar de referencia para pintar (paso Mascara) ---------------- */
+// Algunos videos de la misma camara pueden no mostrar bien el defecto --
+// esto deja recorrer/reproducir cualquier clip de la lista para encontrar
+// uno donde se note mejor, sin perder la mascara ya pintada.
+function renderizarSelectorReferencia() {
+  const sel = document.getElementById("selectClipReferencia");
+  sel.innerHTML = state.clips.map((ruta) => {
+    const nombre = ruta.split(/[\\/]/).pop();
+    return `<option value="${ruta}">${nombre}</option>`;
+  }).join("");
+  if (state.clipReferencia) sel.value = state.clipReferencia;
+}
+
+async function cambiarClipReferencia(ruta) {
+  if (!ruta || ruta === state.clipReferencia) return;
+  document.getElementById("viewportLoading").style.display = "flex";
+  const datos = await api.obtener_frame_y_metadata(ruta);
+  state.clipReferencia = ruta;
+  state.duracionSeg = datos.duracion_seg || 0;
+  cargarFrameMuestra(datos);
+  if (!_metaCache[ruta]) _metaCache[ruta] = {metadata: datos.metadata};
+}
+
+document.getElementById("selectClipReferencia").addEventListener("change", (e) => {
+  cambiarClipReferencia(e.target.value);
+});
 
 function formatoTiempo(seg) {
   seg = Math.max(0, Math.round(seg || 0));
@@ -459,15 +496,28 @@ const stage = document.getElementById("stageMascara");
 const brushCursor = document.getElementById("brushCursor");
 
 function cargarFrameMuestra(datos) {
+  // Si se esta cambiando de clip de referencia (no la primera carga) y el
+  // nuevo tiene exactamente el mismo tamaño, se conserva lo ya pintado en
+  // vez de perderlo -- cambiar de clip para ver donde se nota mejor el
+  // defecto no deberia obligar a repintar la mascara de cero.
+  const mismasDimensiones = state.frameImg && datos.ancho === state.frameW && datos.alto === state.frameH;
+  const snapshotMascara = mismasDimensiones ? cnvMask.toDataURL() : null;
+
   state.frameW = datos.ancho; state.frameH = datos.alto;
   state.frameImg = true;
   cnvMask.width = state.frameW; cnvMask.height = state.frameH;
   ctxMask.clearRect(0, 0, state.frameW, state.frameH);
   videoFrame.pause();
   document.getElementById("viewportLoading").style.display = "flex";
-  videoFrame.src = `/clip_video?path=${encodeURIComponent(state.clips[0])}`;
+  videoFrame.src = `/clip_video?path=${encodeURIComponent(state.clipReferencia)}`;
   videoFrame.load();
-  pushHistory();
+  if (snapshotMascara) {
+    const img = new Image();
+    img.onload = () => { ctxMask.drawImage(img, 0, 0); pushHistory(); actualizarPreview("mascara"); };
+    img.src = snapshotMascara;
+  } else {
+    pushHistory();
+  }
   fitCanvasToViewport();
 }
 
@@ -510,8 +560,8 @@ videoFrame.addEventListener("pause", () => { document.getElementById("iconPlayPa
 // los paneles "antes/despues en vivo" tambien quede sincronizado -- sin
 // bloquear ni frenar el scrubbing visual.
 videoFrame.addEventListener("seeked", () => {
-  if (!api.obtener_frame_en || !state.clips.length) return;
-  api.obtener_frame_en(state.clips[0], videoFrame.currentTime)
+  if (!api.obtener_frame_en || !state.clipReferencia) return;
+  api.obtener_frame_en(state.clipReferencia, videoFrame.currentTime)
     .then(() => actualizarPreview("mascara"))
     .catch(() => {});
 });
@@ -647,6 +697,11 @@ viewport.addEventListener("mouseleave", () => { brushCursor.style.display = "non
 viewport.addEventListener("contextmenu", (e) => { if (e.altKey || state.isResizingBrush) e.preventDefault(); });
 
 viewport.addEventListener("mousedown", (e) => {
+  // Los botones de zoom/reencuadre viven adentro del viewport -- sin esto,
+  // el click les llega bien (hacen zoom) pero el mousedown tambien le
+  // llega al viewport por debajo y arranca un trazo del pincel al mismo
+  // tiempo.
+  if (e.target.closest(".zoom-hud")) return;
   if (e.altKey && e.button === 2) {
     e.preventDefault();
     state.isResizingBrush = true;
@@ -837,7 +892,7 @@ document.getElementById("btnLoadPng").addEventListener("click", async () => {
 });
 
 function nombreSugeridoMascara() {
-  const meta = _metaCache[state.clips[0]] && _metaCache[state.clips[0]].metadata;
+  const meta = _metaCache[state.clipReferencia] && _metaCache[state.clipReferencia].metadata;
   const camara = meta && [meta.marca, meta.modelo].filter(Boolean).join(" ");
   return camara ? `${camara} - PixelCleanMask` : "PixelCleanMask";
 }
