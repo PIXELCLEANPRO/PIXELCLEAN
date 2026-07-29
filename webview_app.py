@@ -65,7 +65,7 @@ RESOLUCIONES = {
 LICENCIA_HASH_PRO = "ab45d00dee70232649d49b004f952ecb6c0ae0a00663c15f5d7b4c2a3929d071"
 LIMITE_GRATIS_DIARIO = 5
 
-VERSION_APP = "1.9.0"
+VERSION_APP = "1.10.0"
 URL_ULTIMA_VERSION = "https://api.github.com/repos/PIXELCLEANPRO/PIXELCLEAN/releases/latest"
 URL_PAGINA_DESCARGA = "https://pixelclean-app.netlify.app"
 
@@ -520,7 +520,14 @@ class Api:
             if not os.path.isfile(ruta):
                 return {"ok": False, "error": "El archivo ya no esta ahi."}
             if os.name == "nt":
-                subprocess.run(["explorer", "/select," + ruta], creationflags=subprocess.CREATE_NO_WINDOW)
+                # Con una lista, subprocess pone comillas alrededor de TODO
+                # "/select,C:\ruta con espacios\archivo.mp4" (por el espacio
+                # en la ruta) -- explorer.exe no entiende eso y abre la
+                # carpeta por defecto (Documentos) en vez de la real. Hay
+                # que pasarlo como un solo string por shell, con la comilla
+                # solo alrededor de la ruta, como se escribiria a mano.
+                subprocess.run(f'explorer /select,"{ruta}"', shell=True,
+                                creationflags=subprocess.CREATE_NO_WINDOW)
             elif sys.platform == "darwin":
                 subprocess.run(["open", "-R", ruta])
             else:

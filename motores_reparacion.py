@@ -155,86 +155,32 @@ def _info_basica(ffprobe_bin, ruta_video):
 # ============================================================
 # MOTOR 1: BLUR GAUSSIANO (via filtro de ffmpeg, todo el video de una)
 # ============================================================
+def _reparar_crop_blur(crop_bgr, mascara_crop, sigma_blur):
+    """Desenfoca el recorte entero y usa la mascara (grados de gris, no
+    binaria) para mezclarlo con el original -- mismo resultado visual que
+    el viejo filtro de ffmpeg (maskedmerge), pero corriendo sobre un
+    recorte chico via el pipeline por-frame compartido en vez de un
+    filter_complex de ffmpeg sobre el cuadro entero, que para clips 4K
+    largos resultaba muchisimo mas lento y con menos memoria (ver
+    motor_opencv_inpaint, mismo pipeline)."""
+    # kernel impar >= 3, proporcional al sigma pedido (Gaussian blur de
+    # OpenCV no toma sigma solo, tambien un tamaño de kernel)
+    k = max(3, int(sigma_blur) * 2 + 1)
+    if k % 2 == 0:
+        k += 1
+    desenfocado = cv2.GaussianBlur(crop_bgr, (k, k), sigma_blur)
+    alfa = (mascara_crop.astype(np.float32) / 255.0)[..., None]
+    return (desenfocado.astype(np.float32) * alfa + crop_bgr.astype(np.float32) * (1 - alfa)).astype(np.uint8)
+
+
 def motor_blur(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ruta_salida,
                 parametros, callback_progreso):
+    if cv2 is None:
+        return False, "Falta instalar opencv-python."
     sigma_blur = parametros.get("sigma_blur", 15)
-    preset_info = parametros["preset_info"]
-    modo_calidad = parametros.get("modo_calidad", "crf")
-    bitrate_objetivo_bps = parametros.get("bitrate_objetivo_bps")
-    resolucion_objetivo = parametros.get("resolucion_objetivo")
-    motor_gpu = parametros.get("motor_gpu")
-
-    filtro = (
-        "[0:v]split=2[base][toblur];"
-        f"[toblur]gblur=sigma={sigma_blur}[blurred];"
-        "[base][blurred][1:v]maskedmerge[out]"
-    )
-    if resolucion_objetivo:
-        w, h = resolucion_objetivo
-        filtro += f";[out]scale={w}:{h}:force_original_aspect_ratio=decrease[outs]"
-        etiqueta_salida = "[outs]"
-    else:
-        etiqueta_salida = "[out]"
-    if motor_gpu:
-        # Camaras profesionales (Sony XAVC, etc.) suelen grabar en 10-bit
-        # 4:2:2 (yuv422p10le) -- los encoders de GPU de consumo (NVENC,
-        # Quick Sync, AMF) no soportan eso por H.264, solo 8-bit 4:2:0, y
-        # rechazan el encode entero si se les manda tal cual. libx264 (CPU)
-        # si soporta alta profundidad de color, asi que esta conversion
-        # solo se fuerza cuando se va a codificar por GPU.
-        filtro += f";{etiqueta_salida}format=yuv420p[outgpu]"
-        etiqueta_salida = "[outgpu]"
-
-    codec_args = _codec_args(motor_gpu, preset_info, modo_calidad, bitrate_objetivo_bps)
-
-    cmd = [
-        ffmpeg_bin, "-y", "-hide_banner", "-loglevel", "error",
-        "-i", ruta_video, "-loop", "1", "-i", ruta_mascara_bn,
-        "-filter_complex", filtro,
-        "-map", etiqueta_salida, "-map", "0:a?",
-        *codec_args, "-threads", "0", "-c:a", "aac", "-b:a", "192k", "-shortest",
-        "-progress", "pipe:1", "-nostats",
-        ruta_salida,
-    ]
-    evento_cancelar = parametros.get("evento_cancelar")
-    return _correr_ffmpeg_con_progreso(cmd, ffprobe_bin, ruta_video, ruta_salida, callback_progreso, evento_cancelar)
-
-
-def _correr_ffmpeg_con_progreso(cmd, ffprobe_bin, ruta_video, ruta_salida, callback_progreso, evento_cancelar=None):
-    import re
-    import threading
-    duracion = _info_basica(ffprobe_bin, ruta_video)["duracion_seg"]
-    try:
-        proceso = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                    text=True, bufsize=1, universal_newlines=True,
-                                    creationflags=_SIN_VENTANA)
-    except Exception as e:
-        return False, f"No se pudo iniciar ffmpeg: {e}"
-
-    stderr_lineas = []
-    threading.Thread(target=lambda: [stderr_lineas.append(l.rstrip()) for l in proceso.stderr], daemon=True).start()
-    patron = re.compile(r"out_time_ms=(\d+)")
-    for linea in proceso.stdout:
-        if evento_cancelar is not None and evento_cancelar.is_set():
-            proceso.terminate()
-            proceso.wait()
-            if os.path.isfile(ruta_salida):
-                try:
-                    os.remove(ruta_salida)
-                except OSError:
-                    pass
-            return False, "Cancelado por el usuario."
-        m = patron.search(linea)
-        if m and duracion:
-            callback_progreso(min(int(m.group(1)) / 1_000_000 / duracion, 1.0))
-        elif "progress=end" in linea:
-            callback_progreso(1.0)
-    proceso.wait()
-    if proceso.returncode != 0 or not os.path.isfile(ruta_salida):
-        detalle = "\n".join(stderr_lineas[-8:]) if stderr_lineas else "(sin detalle)"
-        return False, f"ffmpeg devolvio error (codigo {proceso.returncode}):\n{detalle}"
-    callback_progreso(1.0)
-    return True, ruta_salida
+    reparar_crop = functools.partial(_reparar_crop_blur, sigma_blur=sigma_blur)
+    return _pipeline_por_frame(ffmpeg_bin, ffprobe_bin, ruta_video, ruta_mascara_bn, ruta_salida,
+                                parametros, callback_progreso, reparar_crop)
 
 
 # ============================================================
