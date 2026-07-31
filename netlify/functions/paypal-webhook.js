@@ -54,32 +54,53 @@ async function obtenerEmailComprador(resource, accessToken) {
   return (orden.payer && orden.payer.email_address) || null;
 }
 
-async function avisarVentaAlDueno(emailComprador, monto, moneda) {
-  const clave = process.env.PIXELCLEAN_LICENSE_KEY;
+async function enviarEmail({ to, subject, html }) {
   const from = process.env.RESEND_FROM || "CLIPXEL <onboarding@resend.dev>";
-  const destinatario = process.env.NOTIFICATION_EMAIL;
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      from,
-      to: [destinatario],
-      subject: `Nueva venta CLIPXEL Pro (${monto} ${moneda}) - reenviar clave`,
-      html: `
-        <p>Se registro un pago nuevo de CLIPXEL Pro.</p>
-        <p><strong>Comprador:</strong> ${emailComprador || "(no se pudo determinar el email, revisar en PayPal)"}</p>
-        <p><strong>Monto:</strong> ${monto} ${moneda}</p>
-        <p>Reenviale esta clave manualmente:</p>
-        <p style="font-family:monospace;font-size:18px;background:#f4f4f8;padding:12px 16px;border-radius:8px;display:inline-block">${clave}</p>
-      `,
-    }),
+    body: JSON.stringify({ from, to, subject, html }),
   });
   if (!res.ok) {
     const err = await res.text();
     throw new Error("Fallo el envio de email: " + err);
+  }
+}
+
+// Le manda la clave directo al comprador. Esto solo se llama despues de
+// verificar la firma criptografica del webhook de PayPal (mas arriba), asi
+// que no hay forma de disparar este envio sin un pago real y confirmado.
+async function entregarClaveAlComprador(emailComprador, monto, moneda) {
+  const clave = process.env.PIXELCLEAN_LICENSE_KEY;
+
+  if (emailComprador) {
+    await enviarEmail({
+      to: [emailComprador],
+      subject: "Tu clave de CLIPXEL Pro",
+      html: `
+        <p>¡Gracias por tu compra!</p>
+        <p>Esta es tu clave de licencia de <strong>CLIPXEL Pro</strong>:</p>
+        <p style="font-family:monospace;font-size:18px;background:#f4f4f8;padding:12px 16px;border-radius:8px;display:inline-block">${clave}</p>
+        <p>Pegala en el icono de llave de la app para activarla. Cualquier problema, respondé este email.</p>
+      `,
+    });
+  }
+
+  const destinatario = process.env.NOTIFICATION_EMAIL;
+  if (destinatario) {
+    await enviarEmail({
+      to: [destinatario],
+      subject: `Nueva venta CLIPXEL Pro (${monto} ${moneda})`,
+      html: `
+        <p>Se registro un pago nuevo de CLIPXEL Pro.</p>
+        <p><strong>Comprador:</strong> ${emailComprador || "(no se pudo determinar el email, revisar en PayPal)"}</p>
+        <p><strong>Monto:</strong> ${monto} ${moneda}</p>
+        <p>${emailComprador ? "La clave ya se le envio automaticamente al comprador." : "No se le pudo enviar la clave automaticamente (sin email) -- revisar en PayPal y reenviarla a mano."}</p>
+      `,
+    });
   }
 }
 
@@ -107,8 +128,8 @@ exports.handler = async (event) => {
       const email = await obtenerEmailComprador(body.resource, accessToken);
       const monto = body.resource.amount && body.resource.amount.value;
       const moneda = body.resource.amount && body.resource.amount.currency_code;
-      await avisarVentaAlDueno(email, monto, moneda);
-      console.log("Aviso de venta enviado, comprador:", email);
+      await entregarClaveAlComprador(email, monto, moneda);
+      console.log("Clave entregada, comprador:", email);
     }
 
     return { statusCode: 200, body: "ok" };
