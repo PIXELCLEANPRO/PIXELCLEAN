@@ -1,0 +1,181 @@
+<title>Mi cuenta | CLIPXEL Studio</title>
+<meta name="description" content="Iniciá sesión con Google para activar CLIPXEL Pro o ver el estado de tu cuenta." />
+<meta name="robots" content="noindex, follow" />
+<link rel="canonical" href="https://clipxel.github.io/cuenta.html" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpolygon points='5 3 19 12 5 21 5 3' fill='%234f46e5'/%3E%3C/svg%3E" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<style>
+  :root {
+    --ink: #1d1d1f; --ink-soft: rgba(29,29,31,.64); --ink-faint: rgba(29,29,31,.4);
+    --paper: #eef1f8; --panel: rgba(255,255,255,.5); --panel-2: rgba(255,255,255,.3); --line: rgba(20,20,40,.1);
+    --signal: #0071e3; --signal-ink: #ffffff; --accent-2: #8b5cf6; --accent-3: #12b8ab; --stuck: #12a454;
+    --danger: #d93025;
+    --glass-border: rgba(255,255,255,.6);
+    --shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 1px 2px rgba(20,20,40,.05), 0 30px 60px -18px rgba(20,20,40,.22);
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f5f5f7; --ink-soft: rgba(245,245,247,.68); --ink-faint: rgba(245,245,247,.42);
+      --paper: #0b0c10; --panel: rgba(32,33,40,.45); --panel-2: rgba(32,33,40,.3); --line: rgba(255,255,255,.12);
+      --signal: #409cff; --signal-ink: #06070a; --accent-2: #a78bfa; --accent-3: #2fe0cf; --stuck: #4be890;
+      --danger: #ff6b6b;
+      --glass-border: rgba(255,255,255,.14);
+      --shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 1px 2px rgba(0,0,0,.4), 0 30px 60px -18px rgba(0,0,0,.6);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--paper); color: var(--ink);
+    font-family: var(--font-body); display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .card {
+    width: 100%; max-width: 420px; border-radius: 24px; padding: 34px 30px;
+    background: var(--panel); border: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%);
+    box-shadow: var(--shadow); text-align: center;
+  }
+  .brand { display: flex; align-items: center; justify-content: center; gap: 9px; font-family: var(--font-display); font-weight: 700; font-size: 17px; margin-bottom: 26px; }
+  h1 { font-family: var(--font-display); font-size: 22px; margin: 0 0 10px; letter-spacing: -0.01em; }
+  p.lede { color: var(--ink-soft); font-size: 14.5px; line-height: 1.5; margin: 0 0 26px; }
+  .btn-google {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+    font-family: var(--font-display); font-weight: 600; font-size: 14.5px;
+    background: var(--signal-ink); color: #1f1f1f; border: 1px solid var(--glass-border);
+    border-radius: 999px; padding: 13px 20px; cursor: pointer;
+  }
+  .btn-google:hover { filter: brightness(0.97); }
+  .btn-out {
+    margin-top: 18px; background: none; border: none; color: var(--ink-faint);
+    font-family: var(--font-mono); font-size: 12.5px; cursor: pointer; text-decoration: underline;
+  }
+  .estado { display: none; }
+  .estado.visible { display: block; }
+  .login { display: block; }
+  .login.oculto { display: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px;
+    letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; padding: 6px 14px; margin-bottom: 18px;
+    border: 1px solid var(--glass-border);
+  }
+  .chip.pro { background: linear-gradient(135deg, var(--signal), var(--accent-2)); color: var(--signal-ink); border-color: transparent; }
+  .chip.free { color: var(--ink-soft); }
+  .email { font-size: 14px; color: var(--ink-soft); margin-bottom: 4px; word-break: break-all; }
+  .msg { font-size: 13.5px; margin-top: 16px; padding: 12px 14px; border-radius: 12px; line-height: 1.5; }
+  .msg.error { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+  .msg.ok { background: color-mix(in srgb, var(--stuck) 14%, transparent); color: var(--stuck); }
+  .spinner { display: none; margin: 0 auto 14px; width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--glass-border); border-top-color: var(--signal); animation: spin .8s linear infinite; }
+  .spinner.visible { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  a.volver { display: inline-block; margin-top: 22px; font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint); text-decoration: none; }
+  a.volver:hover { color: var(--ink); }
+</style>
+
+<div class="card">
+  <div class="brand">
+    <svg width="20" height="20" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="#4f46e5"/></svg>
+    CLIPXEL Studio
+  </div>
+
+  <div class="spinner" id="spinner"></div>
+
+  <div class="login" id="bloqueLogin">
+    <h1>Mi cuenta</h1>
+    <p class="lede">Iniciá sesión con Google para activar CLIPXEL Pro (si ya compraste) o ver el estado de tu cuenta.</p>
+    <button class="btn-google" id="btnGoogle">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6 29.6 4 24 4c-7.6 0-14.1 4.3-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.6c-2 1.5-4.6 2.5-7.6 2.5-5.2 0-9.6-3.3-11.3-7.9l-6.6 5.1C9.8 39.6 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.6 5.6C40.9 36.5 44 30.8 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+      Continuar con Google
+    </button>
+  </div>
+
+  <div class="estado" id="bloqueEstado">
+    <span class="chip" id="chipPlan">Cargando...</span>
+    <h1 id="tituloEstado">¡Hola!</h1>
+    <p class="email" id="emailUsuario"></p>
+    <p class="lede" id="descEstado"></p>
+    <button class="btn-out" id="btnSalir">Cerrar sesión</button>
+  </div>
+
+  <div id="mensaje"></div>
+  <a class="volver" href="/">← Volver a clipxel.github.io</a>
+</div>
+
+<script>
+  var SUPABASE_URL = "https://ujuibmpvicuibidkbdrq.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_x3mWkJJdqcimXIVkgbHEUA_-TWxzxtf";
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  var spinner = document.getElementById("spinner");
+  var bloqueLogin = document.getElementById("bloqueLogin");
+  var bloqueEstado = document.getElementById("bloqueEstado");
+  var mensajeEl = document.getElementById("mensaje");
+
+  function mostrarMensaje(texto, tipo) {
+    mensajeEl.innerHTML = texto ? '<div class="msg ' + tipo + '">' + texto + '</div>' : "";
+  }
+
+  function mostrarCargando(on) {
+    spinner.classList.toggle("visible", on);
+  }
+
+  document.getElementById("btnGoogle").addEventListener("click", async function () {
+    mostrarMensaje("", "");
+    await sb.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.href }
+    });
+  });
+
+  document.getElementById("btnSalir").addEventListener("click", async function () {
+    await sb.auth.signOut();
+    window.location.reload();
+  });
+
+  async function cargarPerfil() {
+    var { data: sesion } = await sb.auth.getSession();
+    if (!sesion.session) {
+      bloqueLogin.classList.remove("oculto");
+      bloqueEstado.classList.remove("visible");
+      return;
+    }
+
+    bloqueLogin.classList.add("oculto");
+    mostrarCargando(true);
+
+    var { data: perfilRows, error } = await sb.rpc("mi_perfil");
+    mostrarCargando(false);
+
+    if (error) {
+      mostrarMensaje("No se pudo cargar tu cuenta. Recargá la página.", "error");
+      return;
+    }
+
+    var perfil = (perfilRows && perfilRows[0]) || { plan: "free" };
+    var email = sesion.session.user.email;
+
+    document.getElementById("emailUsuario").textContent = email;
+    var chip = document.getElementById("chipPlan");
+    var titulo = document.getElementById("tituloEstado");
+    var desc = document.getElementById("descEstado");
+
+    if (perfil.plan === "pro") {
+      chip.textContent = "CLIPXEL Pro";
+      chip.className = "chip pro";
+      titulo.textContent = "Ya tenés Pro activado";
+      desc.textContent = "Abrí la app de escritorio e iniciá sesión con esta misma cuenta de Google para desbloquear los clips ilimitados.";
+    } else {
+      chip.textContent = "Plan gratis";
+      chip.className = "chip free";
+      titulo.textContent = "Cuenta gratis";
+      desc.textContent = "Podés usar CLIPXEL gratis (hasta 5 clips por día). Si ya compraste Pro con este mismo email y no se activó, escribinos a clipxels@gmail.com.";
+    }
+
+    bloqueEstado.classList.add("visible");
+  }
+
+  sb.auth.onAuthStateChange(function () { cargarPerfil(); });
+  cargarPerfil();
+</script>

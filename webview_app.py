@@ -5,12 +5,12 @@ usaba la version CustomTkinter; solo cambia la capa visual.
 """
 import base64
 import datetime
-import hashlib
 import io
 import json
 import logging
 import mimetypes
 import os
+import platform
 import sys
 import tempfile
 import threading
@@ -61,13 +61,14 @@ RESOLUCIONES = {
     "720p (1280x720)": (1280, 720),
 }
 
-# Hash SHA-256 de la clave Pro (nunca se guarda la clave en texto plano).
-LICENCIA_HASH_PRO = "ab45d00dee70232649d49b004f952ecb6c0ae0a00663c15f5d7b4c2a3929d071"
 LIMITE_GRATIS_DIARIO = 5
 
-VERSION_APP = "1.12.0"
+SUPABASE_URL = "https://ujuibmpvicuibidkbdrq.supabase.co"
+SUPABASE_ANON_KEY = "sb_publishable_x3mWkJJdqcimXIVkgbHEUA_-TWxzxtf"
+
+VERSION_APP = "2.1.0"
 URL_ULTIMA_VERSION = "https://api.github.com/repos/clipxel/clipxel.github.io/releases/latest"
-URL_PAGINA_DESCARGA = "https://pixelclean-app.netlify.app"
+URL_PAGINA_DESCARGA = "https://clipxel.github.io"
 
 
 def _version_a_tupla(texto):
@@ -193,14 +194,160 @@ class Api:
     def set_ventana(self, ventana):
         self._ventana = ventana
 
-    # ---------- licencia / limite gratis ----------
-    def _es_pro(self):
+    # ---------- cuenta (login con Google) / limite gratis ----------
+    def _cargar_sesion(self):
         try:
-            with open(_ruta_datos_usuario("licencia.json"), "r", encoding="utf-8") as f:
-                datos = json.load(f)
-            return datos.get("hash") == LICENCIA_HASH_PRO
+            with open(_ruta_datos_usuario("sesion.json"), "r", encoding="utf-8") as f:
+                return json.load(f)
         except Exception:
-            return False
+            return {}
+
+    def _guardar_sesion(self, datos):
+        with open(_ruta_datos_usuario("sesion.json"), "w", encoding="utf-8") as f:
+            json.dump(datos, f)
+
+    def _borrar_sesion(self):
+        try:
+            os.remove(_ruta_datos_usuario("sesion.json"))
+        except FileNotFoundError:
+            pass
+
+    def _id_dispositivo(self):
+        """Identificador estable de esta instalacion (no es un fingerprint de
+        hardware real, alcanza para que una cuenta Pro no se comparta entre
+        varias PCs sin querer). Se genera una vez y se reusa siempre."""
+        sesion = self._cargar_sesion()
+        if sesion.get("device_id"):
+            return sesion["device_id"]
+        import uuid
+        return str(uuid.uuid4())
+
+    def _es_pro(self):
+        return self._cargar_sesion().get("plan") == "pro"
+
+    def estado_sesion(self):
+        sesion = self._cargar_sesion()
+        return {"logueado": bool(sesion.get("access_token")), "email": sesion.get("email")}
+
+    def cerrar_sesion(self):
+        self._borrar_sesion()
+        return {"ok": True}
+
+    def iniciar_login_google(self):
+        """Abre el navegador del sistema para el login de Google (via
+        Supabase Auth, flujo PKCE) y espera a que el usuario lo complete.
+        Al volver, liga automaticamente cualquier compra pendiente hecha con
+        ese mismo email y activa Pro en este equipo si corresponde."""
+        import base64
+        import hashlib
+        import http.server
+        import secrets
+        import urllib.parse
+        import urllib.request
+        import webbrowser
+
+        code_verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode("ascii").rstrip("=")
+        code_challenge = base64.urlsafe_b64encode(
+            hashlib.sha256(code_verifier.encode("ascii")).digest()
+        ).decode("ascii").rstrip("=")
+
+        resultado_callback = {}
+        evento_listo = threading.Event()
+
+        class ManejadorCallback(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                query = urllib.parse.urlparse(self.path).query
+                params = urllib.parse.parse_qs(query)
+                resultado_callback["code"] = (params.get("code") or [None])[0]
+                resultado_callback["error"] = (params.get("error_description") or params.get("error") or [None])[0]
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(
+                    "<html><body style='font-family:sans-serif;text-align:center;padding-top:80px'>"
+                    "<h2>Listo, volvé a Clipxel.</h2><p>Ya podés cerrar esta pestaña.</p>"
+                    "</body></html>".encode("utf-8")
+                )
+                evento_listo.set()
+
+            def log_message(self, *args):
+                pass
+
+        servidor = http.server.HTTPServer(("127.0.0.1", 0), ManejadorCallback)
+        puerto = servidor.server_address[1]
+        threading.Thread(target=servidor.handle_request, daemon=True).start()
+
+        redirect_to = f"http://127.0.0.1:{puerto}/callback"
+        url_login = (
+            f"{SUPABASE_URL}/auth/v1/authorize?"
+            + urllib.parse.urlencode({
+                "provider": "google",
+                "redirect_to": redirect_to,
+                "code_challenge": code_challenge,
+                "code_challenge_method": "s256",
+            })
+        )
+        webbrowser.open(url_login)
+
+        if not evento_listo.wait(timeout=180):
+            return {"ok": False, "error": "Se agoto el tiempo de espera del login. Probá de nuevo."}
+
+        if resultado_callback.get("error") or not resultado_callback.get("code"):
+            return {"ok": False, "error": resultado_callback.get("error") or "No se pudo completar el login."}
+
+        try:
+            req = urllib.request.Request(
+                f"{SUPABASE_URL}/auth/v1/token?grant_type=pkce",
+                data=json.dumps({
+                    "auth_code": resultado_callback["code"],
+                    "code_verifier": code_verifier,
+                }).encode("utf-8"),
+                headers={"apikey": SUPABASE_ANON_KEY, "Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                token_datos = json.loads(resp.read().decode("utf-8"))
+        except Exception as e:
+            return {"ok": False, "error": f"No se pudo validar el login: {e}"}
+
+        access_token = token_datos.get("access_token")
+        email = (token_datos.get("user") or {}).get("email")
+        if not access_token or not email:
+            return {"ok": False, "error": "Login incompleto, probá de nuevo."}
+
+        device_id = self._id_dispositivo()
+        device_label = platform.node()
+
+        try:
+            req = urllib.request.Request(
+                f"{SUPABASE_URL}/rest/v1/rpc/iniciar_sesion",
+                data=json.dumps({"p_device_id": device_id, "p_device_label": device_label}).encode("utf-8"),
+                headers={
+                    "apikey": SUPABASE_ANON_KEY,
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                sesion_datos = json.loads(resp.read().decode("utf-8"))
+        except Exception as e:
+            return {"ok": False, "error": f"No se pudo activar la cuenta: {e}"}
+
+        if not sesion_datos.get("ok"):
+            return {"ok": False, "error": sesion_datos.get("error") or "No se pudo iniciar sesion."}
+
+        if sesion_datos.get("bloqueado_por_otro_equipo"):
+            return {"ok": False, "error": "Tu cuenta CLIPXEL Pro ya esta activa en otro equipo. Cerra sesion ahi primero."}
+
+        self._guardar_sesion({
+            "access_token": access_token,
+            "refresh_token": token_datos.get("refresh_token"),
+            "email": email,
+            "plan": sesion_datos.get("plan", "free"),
+            "device_id": device_id,
+        })
+        return {"ok": True, "email": email, "plan": sesion_datos.get("plan", "free")}
 
     def _leer_uso(self):
         hoy = datetime.date.today().isoformat()
@@ -226,14 +373,6 @@ class Api:
         restantes = max(LIMITE_GRATIS_DIARIO - uso.get("clips", 0), 0)
         return {"pro": False, "restantes": restantes, "limite": LIMITE_GRATIS_DIARIO}
 
-    def activar_licencia(self, clave):
-        clave = (clave or "").strip().upper()
-        h = hashlib.sha256(clave.encode("utf-8")).hexdigest()
-        if h == LICENCIA_HASH_PRO:
-            with open(_ruta_datos_usuario("licencia.json"), "w", encoding="utf-8") as f:
-                json.dump({"hash": h}, f)
-            return {"ok": True}
-        return {"ok": False, "error": "Esa clave no es valida."}
 
     # ---------- actualizaciones ----------
     def obtener_estado_actualizacion(self):

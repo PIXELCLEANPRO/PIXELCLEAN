@@ -71,7 +71,7 @@ const mockApi = {
       n++;
       mockApi._progreso.completados = n;
       mockApi._progreso.por_clip = mockApi._progreso.por_clip.map((_, i) => (i < n ? 1 : 0));
-      mockApi._progreso.rutas_salida[n - 1] = `C:/videos/PixelClean/clip_${n}.mp4`;
+      mockApi._progreso.rutas_salida[n - 1] = `C:/videos/Clipxel/clip_${n}.mp4`;
       mockApi._progreso.logs.push({mensaje: `OK: clip_${n}.mp4 -> clip_${n}.mp4`, ok: true});
       if (n < payload.clips.length) setTimeout(avanzar, 700);
       else mockApi._progreso.terminado = true;
@@ -82,7 +82,9 @@ const mockApi = {
   mostrar_en_carpeta: async (ruta) => ({ok: false, error: "Modo de prueba en navegador: no se puede abrir el explorador de archivos aca."}),
   cancelar_procesamiento: async () => { if (mockApi._progreso) mockApi._progreso.terminado = true; return {ok: true}; },
   estado_licencia: async () => ({pro: false, restantes: 5, limite: 5}),
-  activar_licencia: async () => ({ok: false, error: "Modo de prueba en navegador: no se puede validar una clave real aca."}),
+  estado_sesion: async () => ({logueado: false, email: null}),
+  iniciar_login_google: async () => ({ok: false, error: "Modo de prueba en navegador: el login real solo funciona en la app instalada."}),
+  cerrar_sesion: async () => ({ok: true}),
   obtener_estado_actualizacion: async () => ({hay_actualizacion: false}),
   instalar_actualizacion: async () => ({ok: false, error: "Modo de prueba en navegador: la auto-instalacion solo funciona en la app real."}),
   _carpetaSalidaMock: null,
@@ -163,31 +165,42 @@ async function refrescarPlanBadge() {
   }
 }
 
-/* ---------------- Modal: activar licencia ---------------- */
+/* ---------------- Modal: mi cuenta (login con Google) ---------------- */
 const licenciaOverlay = document.getElementById("licenciaOverlay");
-const licenciaInput = document.getElementById("licenciaInput");
 const licenciaMsg = document.getElementById("licenciaMsg");
 const licenciaStatus = document.getElementById("licenciaStatus");
+const licenciaSesionOff = document.getElementById("licenciaSesionOff");
+const licenciaSesionOn = document.getElementById("licenciaSesionOn");
+const licenciaEmailActivo = document.getElementById("licenciaEmailActivo");
 
 async function abrirModalLicencia() {
   licenciaMsg.textContent = "";
   licenciaMsg.className = "licencia-msg";
-  licenciaInput.value = "";
-  licenciaStatus.textContent = "Consultando tu plan...";
+  licenciaStatus.textContent = "Consultando tu cuenta...";
   licenciaOverlay.classList.add("open");
-  licenciaInput.focus();
 
-  const estado = await api.estado_licencia().catch(() => null);
+  const [sesion, estado] = await Promise.all([
+    api.estado_sesion().catch(() => ({logueado: false})),
+    api.estado_licencia().catch(() => null),
+  ]);
+
+  if (sesion.logueado) {
+    licenciaSesionOff.style.display = "none";
+    licenciaSesionOn.style.display = "";
+    licenciaEmailActivo.textContent = sesion.email;
+  } else {
+    licenciaSesionOff.style.display = "";
+    licenciaSesionOn.style.display = "none";
+  }
+
   if (!estado) {
     licenciaStatus.textContent = "";
   } else if (estado.pro) {
-    licenciaStatus.textContent = "Ya tenes PixelClean Pro activado. Gracias por bancar el proyecto!";
-    licenciaInput.style.display = "none";
-    document.getElementById("licenciaActivar").style.display = "none";
+    licenciaStatus.textContent = "Ya tenés CLIPXEL Pro activado. Gracias por bancar el proyecto!";
+  } else if (sesion.logueado) {
+    licenciaStatus.textContent = `Plan gratis: te quedan ${estado.restantes} de ${estado.limite} clips hoy. Si ya comprastes Pro con este mismo Google, cerrá sesión y volvé a entrar.`;
   } else {
-    licenciaStatus.textContent = `Version gratis: te quedan ${estado.restantes} de ${estado.limite} clips hoy. Si comprastes Pro, pega tu clave aca.`;
-    licenciaInput.style.display = "";
-    document.getElementById("licenciaActivar").style.display = "";
+    licenciaStatus.textContent = `Plan gratis: te quedan ${estado.restantes} de ${estado.limite} clips hoy. Iniciá sesión con el Google con el que compraste Pro para activarlo.`;
   }
 }
 
@@ -201,27 +214,29 @@ document.getElementById("licenciaCancelar").addEventListener("click", cerrarModa
 licenciaOverlay.addEventListener("click", (e) => { if (e.target === licenciaOverlay) cerrarModalLicencia(); });
 window.addEventListener("keydown", (e) => { if (e.key === "Escape" && licenciaOverlay.classList.contains("open")) cerrarModalLicencia(); });
 
-async function activarLicenciaDesdeModal() {
-  const clave = licenciaInput.value.trim();
-  if (!clave) return;
-  const btnActivar = document.getElementById("licenciaActivar");
-  btnActivar.disabled = true;
-  const resultado = await api.activar_licencia(clave).catch((err) => ({ok: false, error: String(err)}));
-  btnActivar.disabled = false;
+document.getElementById("licenciaLoginGoogle").addEventListener("click", async () => {
+  const btn = document.getElementById("licenciaLoginGoogle");
+  btn.disabled = true;
+  licenciaMsg.textContent = "Se abrió tu navegador para iniciar sesión con Google. Completá el login ahí y volvé acá.";
+  licenciaMsg.className = "licencia-msg";
+  const resultado = await api.iniciar_login_google().catch((err) => ({ok: false, error: String(err)}));
+  btn.disabled = false;
   if (resultado.ok) {
-    licenciaMsg.textContent = "Listo, PixelClean Pro activado. Gracias!";
+    licenciaMsg.textContent = resultado.plan === "pro" ? "Listo, CLIPXEL Pro activado. Gracias!" : "Sesión iniciada. Estás en el plan gratis.";
     licenciaMsg.className = "licencia-msg ok";
-    licenciaStatus.textContent = "";
-    licenciaInput.style.display = "none";
-    btnActivar.style.display = "none";
     refrescarPlanBadge();
+    abrirModalLicencia();
   } else {
-    licenciaMsg.textContent = resultado.error || "Esa clave no es valida.";
+    licenciaMsg.textContent = resultado.error || "No se pudo iniciar sesión.";
     licenciaMsg.className = "licencia-msg err";
   }
-}
-document.getElementById("licenciaActivar").addEventListener("click", activarLicenciaDesdeModal);
-licenciaInput.addEventListener("keydown", (e) => { if (e.key === "Enter") activarLicenciaDesdeModal(); });
+});
+
+document.getElementById("licenciaCerrarSesion").addEventListener("click", async () => {
+  await api.cerrar_sesion().catch(() => null);
+  refrescarPlanBadge();
+  abrirModalLicencia();
+});
 
 /* ---------------- Upsell a Pro al terminar de exportar ---------------- */
 async function mostrarUpsellSiCorresponde() {
@@ -894,7 +909,7 @@ document.getElementById("btnLoadPng").addEventListener("click", async () => {
 function nombreSugeridoMascara() {
   const meta = _metaCache[state.clipReferencia] && _metaCache[state.clipReferencia].metadata;
   const camara = meta && [meta.marca, meta.modelo].filter(Boolean).join(" ");
-  return camara ? `${camara} - PixelCleanMask` : "PixelCleanMask";
+  return camara ? `${camara} - ClipxelMask` : "ClipxelMask";
 }
 
 document.getElementById("btnBajarPng").addEventListener("click", async () => {
@@ -1129,10 +1144,10 @@ function pintarCarpetaSalida(carpeta) {
   const lbl = document.getElementById("lblCarpetaSalida");
   const btnRestablecer = document.getElementById("btnRestablecerCarpetaSalida");
   if (carpeta) {
-    lbl.textContent = `Se va a crear "PixelClean" dentro de: ${carpeta}`;
+    lbl.textContent = `Se va a crear "Clipxel" dentro de: ${carpeta}`;
     btnRestablecer.style.display = "inline-flex";
   } else {
-    lbl.textContent = 'Predeterminada: junto al medio original, en una carpeta "PixelClean".';
+    lbl.textContent = 'Predeterminada: junto al medio original, en una carpeta "Clipxel".';
     btnRestablecer.style.display = "none";
   }
 }
@@ -1221,7 +1236,7 @@ async function procesarTodo() {
       `Llegaste al limite de la version gratis: ${estadoPrevio.limite} clips por dia (te quedan ${estadoPrevio.restantes}).`,
       "err"
     );
-    logLinea("Activa PixelClean Pro (boton con la llave, arriba) para procesar sin limite diario.", "err");
+    logLinea("Activa Clipxel Pro (boton con la llave, arriba) para procesar sin limite diario.", "err");
     abrirModalLicencia();
     return;
   }

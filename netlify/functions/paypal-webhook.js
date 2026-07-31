@@ -1,6 +1,8 @@
 // Recibe el webhook de PayPal cuando se completa un pago, verifica que sea
-// autentico, y le manda la clave de licencia Pro al comprador por email.
+// autentico, y liga la compra a la cuenta de Google del comprador para que
+// se active sola cuando inicie sesion (ver public.iniciar_sesion en Supabase).
 const PAYPAL_API = "https://api-m.paypal.com";
+const SUPABASE_URL = "https://ujuibmpvicuibidkbdrq.supabase.co";
 
 async function obtenerAccessToken() {
   const auth = Buffer.from(
@@ -70,24 +72,70 @@ async function enviarEmail({ to, subject, html }) {
   }
 }
 
-// Le manda la clave directo al comprador. Esto solo se llama despues de
-// verificar la firma criptografica del webhook de PayPal (mas arriba), asi
-// que no hay forma de disparar este envio sin un pago real y confirmado.
-async function entregarClaveAlComprador(emailComprador, monto, moneda) {
-  const clave = process.env.PIXELCLEAN_LICENSE_KEY;
+function generarClaveDeRegistro() {
+  // Solo para tener un identificador legible de la compra en soporte /
+  // PayPal; la activacion real no depende de que el comprador la copie a
+  // ningun lado, pasa sola al iniciar sesion con el mismo Google.
+  const bytes = require("crypto").randomBytes(10).toString("hex").toUpperCase();
+  return `CLIPXEL-${bytes.slice(0, 5)}-${bytes.slice(5, 10)}-${bytes.slice(10, 15)}-${bytes.slice(15, 20)}`;
+}
 
-  if (emailComprador) {
-    await enviarEmail({
-      to: [emailComprador],
-      subject: "Tu clave de CLIPXEL Pro",
-      html: `
-        <p>¡Gracias por tu compra!</p>
-        <p>Esta es tu clave de licencia de <strong>CLIPXEL Pro</strong>:</p>
-        <p style="font-family:monospace;font-size:18px;background:#f4f4f8;padding:12px 16px;border-radius:8px;display:inline-block">${clave}</p>
-        <p>Pegala en el icono de llave de la app para activarla. Cualquier problema, respondé este email.</p>
-      `,
-    });
+async function registrarCompra(emailComprador, monto, moneda, orderId) {
+  const claveRegistro = generarClaveDeRegistro();
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/licenses`, {
+    method: "POST",
+    headers: {
+      apikey: process.env.SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify({
+      license_key: claveRegistro,
+      buyer_email: emailComprador,
+      paypal_order_id: orderId || null,
+      monto: monto || null,
+      moneda: moneda || null,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error("No se pudo registrar la compra en Supabase: " + err);
   }
+  return claveRegistro;
+}
+
+// Esto solo se llama despues de verificar la firma criptografica del
+// webhook de PayPal (mas arriba), asi que no hay forma de activar una
+// cuenta gratis a Pro sin un pago real y confirmado.
+async function entregarAlComprador(emailComprador, monto, moneda, orderId) {
+  if (!emailComprador) {
+    const destinatario = process.env.NOTIFICATION_EMAIL;
+    if (destinatario) {
+      await enviarEmail({
+        to: [destinatario],
+        subject: `Venta CLIPXEL Pro sin email de comprador (${monto} ${moneda})`,
+        html: `<p>Se registro un pago pero no se pudo determinar el email del comprador. Revisar en PayPal y activar la cuenta a mano en Supabase (tabla licenses).</p>`,
+      });
+    }
+    return;
+  }
+
+  await registrarCompra(emailComprador, monto, moneda, orderId);
+
+  await enviarEmail({
+    to: [emailComprador],
+    subject: "Tu compra de CLIPXEL Pro",
+    html: `
+      <p>¡Gracias por tu compra!</p>
+      <p>Para activar <strong>CLIPXEL Pro</strong> solo tenés que iniciar sesión con esta misma cuenta de Google (${emailComprador}):</p>
+      <ul>
+        <li>Dentro del programa Clipxel, tocá "Iniciar sesión con Google".</li>
+        <li>O entrá a <a href="https://clipxel.github.io">clipxel.github.io</a> e iniciá sesión ahí.</li>
+      </ul>
+      <p>Se activa solo, sin claves que copiar. Cualquier problema, respondé este email.</p>
+    `,
+  });
 
   const destinatario = process.env.NOTIFICATION_EMAIL;
   if (destinatario) {
@@ -96,9 +144,9 @@ async function entregarClaveAlComprador(emailComprador, monto, moneda) {
       subject: `Nueva venta CLIPXEL Pro (${monto} ${moneda})`,
       html: `
         <p>Se registro un pago nuevo de CLIPXEL Pro.</p>
-        <p><strong>Comprador:</strong> ${emailComprador || "(no se pudo determinar el email, revisar en PayPal)"}</p>
+        <p><strong>Comprador:</strong> ${emailComprador}</p>
         <p><strong>Monto:</strong> ${monto} ${moneda}</p>
-        <p>${emailComprador ? "La clave ya se le envio automaticamente al comprador." : "No se le pudo enviar la clave automaticamente (sin email) -- revisar en PayPal y reenviarla a mano."}</p>
+        <p>Se le aviso que active iniciando sesion con Google.</p>
       `,
     });
   }
@@ -128,8 +176,12 @@ exports.handler = async (event) => {
       const email = await obtenerEmailComprador(body.resource, accessToken);
       const monto = body.resource.amount && body.resource.amount.value;
       const moneda = body.resource.amount && body.resource.amount.currency_code;
-      await entregarClaveAlComprador(email, monto, moneda);
-      console.log("Clave entregada, comprador:", email);
+      const orderId =
+        body.resource.supplementary_data &&
+        body.resource.supplementary_data.related_ids &&
+        body.resource.supplementary_data.related_ids.order_id;
+      await entregarAlComprador(email, monto, moneda, orderId);
+      console.log("Compra registrada, comprador:", email);
     }
 
     return { statusCode: 200, body: "ok" };
