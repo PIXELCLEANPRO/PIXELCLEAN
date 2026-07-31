@@ -66,7 +66,7 @@ LIMITE_GRATIS_DIARIO = 5
 SUPABASE_URL = "https://ujuibmpvicuibidkbdrq.supabase.co"
 SUPABASE_ANON_KEY = "sb_publishable_x3mWkJJdqcimXIVkgbHEUA_-TWxzxtf"
 
-VERSION_APP = "2.1.0"
+VERSION_APP = "2.2.0"
 URL_ULTIMA_VERSION = "https://api.github.com/repos/clipxel/clipxel.github.io/releases/latest"
 URL_PAGINA_DESCARGA = "https://clipxel.github.io"
 

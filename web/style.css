@@ -519,6 +519,33 @@ select {
 .licencia-actions { display: flex; gap: 10px; }
 .licencia-actions .btn { flex: 1; justify-content: center; }
 
+/* ---------------- Auth gate (bloquea toda la app sin login) ---------------- */
+.auth-gate {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(6, 7, 10, .45);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.auth-gate-card {
+  width: 100%; max-width: 400px; padding: 38px 32px; text-align: center; border-radius: var(--radius-lg);
+  background: var(--bg-card); border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%);
+}
+.auth-gate-card h1 { font-size: 21px; margin: 0 0 10px; letter-spacing: -0.01em; }
+.auth-gate-card p { font-size: 14px; color: var(--text-2); line-height: 1.5; margin: 0 0 24px; }
+.btn-google-gate {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-weight: 600; font-size: 14.5px; background: #fff; color: #1f1f1f;
+  border: 1px solid var(--glass-border); border-radius: 999px; padding: 13px 20px; cursor: pointer;
+  transition: filter .15s;
+}
+.btn-google-gate:hover { filter: brightness(0.97); }
+.btn-google-gate:disabled { opacity: .6; cursor: default; }
+.auth-gate-msg { min-height: 16px; font-size: 13px; margin: 16px 0 0; color: var(--text-2); }
+.auth-gate-msg.err { color: var(--danger); }
+.auth-gate-msg.ok { color: var(--success); }
+
 ::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
 ::-webkit-scrollbar-track { background: transparent; }

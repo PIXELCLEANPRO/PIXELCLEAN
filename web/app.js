@@ -1,5 +1,37 @@
 "use strict";
 
+/* ---------------- Auth gate: bloquea toda la app sin sesion ---------------- */
+(function () {
+  const gate = document.getElementById("authGate");
+  const btn = document.getElementById("gateLoginGoogle");
+  const msg = document.getElementById("gateMsg");
+
+  async function chequearSesion() {
+    const sesion = await api.estado_sesion().catch(() => ({ logueado: false }));
+    gate.style.display = sesion.logueado ? "none" : "flex";
+    return sesion.logueado;
+  }
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    msg.textContent = "Se abrió tu navegador para iniciar sesión con Google. Completá el login ahí y volvé acá.";
+    msg.className = "auth-gate-msg";
+    const resultado = await api.iniciar_login_google().catch((err) => ({ ok: false, error: String(err) }));
+    btn.disabled = false;
+    if (resultado.ok) {
+      msg.textContent = "¡Listo! Entrando...";
+      msg.className = "auth-gate-msg ok";
+      gate.style.display = "none";
+      if (typeof refrescarPlanBadge === "function") refrescarPlanBadge();
+    } else {
+      msg.textContent = resultado.error || "No se pudo iniciar sesión.";
+      msg.className = "auth-gate-msg err";
+    }
+  });
+
+  chequearSesion();
+})();
+
 const PASOS = ["Clip", "Mascara", "Motor y calidad", "Procesar"];
 const state = {
   step: 0,
