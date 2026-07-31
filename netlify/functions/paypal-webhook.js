@@ -56,7 +56,7 @@ async function obtenerEmailComprador(resource, accessToken) {
 
 async function avisarVentaAlDueno(emailComprador, monto, moneda) {
   const clave = process.env.PIXELCLEAN_LICENSE_KEY;
-  const from = process.env.RESEND_FROM || "PixelClean <onboarding@resend.dev>";
+  const from = process.env.RESEND_FROM || "CLIPXEL <onboarding@resend.dev>";
   const destinatario = process.env.NOTIFICATION_EMAIL;
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -67,9 +67,9 @@ async function avisarVentaAlDueno(emailComprador, monto, moneda) {
     body: JSON.stringify({
       from,
       to: [destinatario],
-      subject: `Nueva venta PixelClean Pro (${monto} ${moneda}) - reenviar clave`,
+      subject: `Nueva venta CLIPXEL Pro (${monto} ${moneda}) - reenviar clave`,
       html: `
-        <p>Se registro un pago nuevo de PixelClean Pro.</p>
+        <p>Se registro un pago nuevo de CLIPXEL Pro.</p>
         <p><strong>Comprador:</strong> ${emailComprador || "(no se pudo determinar el email, revisar en PayPal)"}</p>
         <p><strong>Monto:</strong> ${monto} ${moneda}</p>
         <p>Reenviale esta clave manualmente:</p>
