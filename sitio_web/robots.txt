@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://pixelcleanpro.github.io/sitemap.xml
+Sitemap: https://clipxel.github.io/sitemap.xml
