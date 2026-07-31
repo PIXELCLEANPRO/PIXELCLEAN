@@ -57,7 +57,7 @@ app = BUNDLE(
     coll,
     name='Clipxel.app',
     icon='icon.icns',
-    bundle_identifier='com.pixelcleanpro.app',
+    bundle_identifier='com.clipxel.app',
     info_plist={
         'CFBundleName': 'Clipxel',
         'CFBundleDisplayName': 'CLIPXEL Studio',
