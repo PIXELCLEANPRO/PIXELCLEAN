@@ -31,7 +31,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='PixelClean',
+    name='Clipxel',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -50,17 +50,17 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name='PixelClean',
+    name='Clipxel',
 )
 
 app = BUNDLE(
     coll,
-    name='PixelClean.app',
+    name='Clipxel.app',
     icon='icon.icns',
     bundle_identifier='com.pixelcleanpro.app',
     info_plist={
-        'CFBundleName': 'PixelClean',
-        'CFBundleDisplayName': 'PixelClean',
+        'CFBundleName': 'Clipxel',
+        'CFBundleDisplayName': 'CLIPXEL Studio',
         'CFBundleShortVersionString': '1.1.0',
         'NSHighResolutionCapable': 'True',
     },

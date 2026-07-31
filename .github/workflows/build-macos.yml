@@ -50,23 +50,23 @@ jobs:
           iconutil -c icns icon.iconset -o icon.icns
 
       - name: Compilar con PyInstaller
-        run: pyinstaller --noconfirm PixelClean_mac.spec
+        run: pyinstaller --noconfirm Clipxel_mac.spec
 
       - name: Empaquetar en .dmg
         run: |
           mkdir -p dmg_root
-          cp -R "dist/PixelClean.app" dmg_root/
+          cp -R "dist/Clipxel.app" dmg_root/
           ln -s /Applications dmg_root/Applications
-          hdiutil create -volname "PixelClean" -srcfolder dmg_root -ov -format UDZO PixelClean_Mac.dmg
+          hdiutil create -volname "CLIPXEL Studio" -srcfolder dmg_root -ov -format UDZO Clipxel_Mac.dmg
 
       - name: Subir como asset del release v1.0
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ inputs.release_tag }}" PixelClean_Mac.dmg --repo ${{ github.repository }} --clobber
+          gh release upload "${{ inputs.release_tag }}" Clipxel_Mac.dmg --repo ${{ github.repository }} --clobber
 
       - name: Subir tambien como artifact del workflow
         uses: actions/upload-artifact@v4
         with:
-          name: PixelClean_Mac
-          path: PixelClean_Mac.dmg
+          name: Clipxel_Mac
+          path: Clipxel_Mac.dmg

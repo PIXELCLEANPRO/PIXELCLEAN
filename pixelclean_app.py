@@ -1,5 +1,5 @@
 """
-PixelClean - Reparador de pixeles quemados
+CLIPXEL Studio - Reparador de pixeles quemados
 Interfaz por pasos (Clip -> Mascara -> Motor y calidad -> Procesar) con
 vista previa en tiempo real con zoom, editor de mascara con pincel, y
 tema claro/oscuro con estilo "vidrio" (tarjetas redondeadas, acentos y
@@ -422,10 +422,10 @@ class EditorMascara(ctk.CTkFrame):
 # ============================================================
 # APP PRINCIPAL
 # ============================================================
-class PixelCleanApp(ctk.CTk):
+class ClipxelApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("PixelClean - Reparador de pixeles quemados")
+        self.title("CLIPXEL Studio - Reparador de pixeles quemados")
         self.geometry("1220x820")
         self.minsize(1000, 700)
         self.configure(fg_color=COLOR["bg_page"])
@@ -462,7 +462,7 @@ class PixelCleanApp(ctk.CTk):
         marca.grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(marca, text="▶", font=ctk.CTkFont(size=18, weight="bold"),
                      text_color=COLOR["accent"]).pack(side="left", padx=(0, 6))
-        ctk.CTkLabel(marca, text="PixelClean", font=ctk.CTkFont(size=19, weight="bold"),
+        ctk.CTkLabel(marca, text="CLIPXEL Studio", font=ctk.CTkFont(size=19, weight="bold"),
                      text_color=COLOR["text_primary"]).pack(side="left")
 
         self.frame_pasos = ctk.CTkFrame(barra_superior, fg_color="transparent")
@@ -863,5 +863,5 @@ class PixelCleanApp(ctk.CTk):
 if __name__ == "__main__":
     ctk.set_appearance_mode("light")
     ctk.set_default_color_theme("blue")
-    app = PixelCleanApp()
+    app = ClipxelApp()
     app.mainloop()

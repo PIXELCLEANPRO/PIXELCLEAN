@@ -1,5 +1,5 @@
 """
-PixelClean - punto de entrada de la version con interfaz web (pywebview).
+Clipxel - punto de entrada de la version con interfaz web (pywebview).
 El backend (motores de reparacion, lectura de metadata) es el mismo que
 usaba la version CustomTkinter; solo cambia la capa visual.
 """
@@ -66,7 +66,7 @@ LICENCIA_HASH_PRO = "ab45d00dee70232649d49b004f952ecb6c0ae0a00663c15f5d7b4c2a392
 LIMITE_GRATIS_DIARIO = 5
 
 VERSION_APP = "1.12.0"
-URL_ULTIMA_VERSION = "https://api.github.com/repos/PIXELCLEANPRO/PIXELCLEAN/releases/latest"
+URL_ULTIMA_VERSION = "https://api.github.com/repos/clipxel/clipxel.github.io/releases/latest"
 URL_PAGINA_DESCARGA = "https://pixelclean-app.netlify.app"
 
 
@@ -86,7 +86,7 @@ def _carpeta_datos_app():
         base = os.path.join(os.path.expanduser("~"), "Library", "Application Support")
     else:
         base = os.environ.get("XDG_DATA_HOME", os.path.join(os.path.expanduser("~"), ".local", "share"))
-    carpeta = os.path.join(base, "PixelClean")
+    carpeta = os.path.join(base, "Clipxel")
     os.makedirs(carpeta, exist_ok=True)
     return carpeta
 
@@ -97,7 +97,7 @@ def _ruta_datos_usuario(nombre_archivo):
 
 def _leer_carpeta_salida_personalizada():
     """Carpeta base (elegida por el usuario) donde crear la subcarpeta
-    "PixelClean" de exportacion, en vez de la ubicacion por defecto (junto
+    "Clipxel" de exportacion, en vez de la ubicacion por defecto (junto
     al medio original). None si no se configuro ninguna, o si la que se
     habia elegido ya no existe (ej. se desconecto un disco externo)."""
     try:
@@ -249,7 +249,7 @@ class Api:
         try:
             req = urllib.request.Request(
                 URL_ULTIMA_VERSION,
-                headers={"Accept": "application/vnd.github+json", "User-Agent": "PixelClean"},
+                headers={"Accept": "application/vnd.github+json", "User-Agent": "Clipxel"},
             )
             with urllib.request.urlopen(req, timeout=6) as resp:
                 datos = json.loads(resp.read().decode("utf-8"))
@@ -257,7 +257,7 @@ class Api:
             if _version_a_tupla(version_remota) > _version_a_tupla(VERSION_APP):
                 descarga_url = None
                 for asset in datos.get("assets", []):
-                    if asset.get("name") == "PixelClean_Setup.exe":
+                    if asset.get("name") == "Clipxel_Setup.exe":
                         descarga_url = asset.get("browser_download_url")
                         break
                 with self._actualizacion_lock:
@@ -285,7 +285,7 @@ class Api:
         """Descarga el instalador nuevo y lo lanza en modo silencioso; el
         instalador reemplaza esta misma instalacion (mismo AppId => actualizacion
         in-place) y vuelve a abrir la app solo. La licencia no se pierde porque
-        vive en %LOCALAPPDATA%\\PixelClean, fuera de la carpeta de instalacion.
+        vive en %LOCALAPPDATA%\\Clipxel, fuera de la carpeta de instalacion.
         Devuelve {"ok": bool, "error": str|None} -- el llamador debe propagarlo,
         nunca asumir que salio bien."""
         try:
@@ -294,7 +294,7 @@ class Api:
 
             import urllib.request
             import tempfile
-            ruta_temp = os.path.join(tempfile.gettempdir(), "PixelClean_Setup_actualizacion.exe")
+            ruta_temp = os.path.join(tempfile.gettempdir(), "Clipxel_Setup_actualizacion.exe")
             urllib.request.urlretrieve(descarga_url, ruta_temp)
 
             import subprocess
@@ -598,7 +598,7 @@ class Api:
     def _procesar_todo_worker(self, payload):
         clips = payload["clips"]
         try:
-            # Por defecto cada clip se exporta a una carpeta "PixelClean"
+            # Por defecto cada clip se exporta a una carpeta "Clipxel"
             # junto al medio original (asi si el lote mezcla clips de
             # distintas carpetas, cada uno sale al lado del suyo). Si el
             # usuario eligio una carpeta fija (ver elegir_carpeta_salida),
@@ -634,7 +634,7 @@ class Api:
                     self._agregar_log("Cancelado por el usuario.", False)
                     break
                 carpeta_base = carpeta_salida_fija or os.path.dirname(clip)
-                carpeta_salida = os.path.join(carpeta_base, "PixelClean")
+                carpeta_salida = os.path.join(carpeta_base, "Clipxel")
                 os.makedirs(carpeta_salida, exist_ok=True)
                 nombre = os.path.splitext(os.path.basename(clip))[0]
                 ext = os.path.splitext(clip)[1] or ".mp4"
@@ -696,7 +696,7 @@ class Api:
             if carpeta_salida_fija:
                 self._agregar_log(f"Listo. Carpeta de salida: {carpeta_salida}", True)
             else:
-                self._agregar_log('Listo. Cada clip se exporto en una carpeta "PixelClean" junto al original.', True)
+                self._agregar_log('Listo. Cada clip se exporto en una carpeta "Clipxel" junto al original.', True)
         except Exception:
             self._agregar_log("ERROR inesperado:\n" + traceback.format_exc(), False)
         finally:
@@ -870,7 +870,7 @@ def main():
     api = Api()
     threading.Thread(target=api._revisar_actualizacion_en_fondo, daemon=True).start()
     puerto = _iniciar_servidor(api)
-    titulo_ventana = "PixelClean - Reparador de pixeles quemados"
+    titulo_ventana = "CLIPXEL Studio - Reparador de pixeles quemados"
     ventana = webview.create_window(
         titulo_ventana,
         f"http://127.0.0.1:{puerto}/index.html",

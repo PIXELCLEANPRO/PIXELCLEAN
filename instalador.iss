@@ -1,10 +1,10 @@
-; Script de Inno Setup para "PixelClean"
-; Empaqueta la build de PyInstaller (dist\PixelClean) en un instalador standalone.
+; Script de Inno Setup para "Clipxel"
+; Empaqueta la build de PyInstaller (dist\Clipxel) en un instalador standalone.
 
-#define MyAppName "PixelClean"
+#define MyAppName "CLIPXEL Studio"
 #define MyAppVersion "1.12"
-#define MyAppExeName "PixelClean.exe"
-#define MyAppPublisher "PixelClean"
+#define MyAppExeName "Clipxel.exe"
+#define MyAppPublisher "CLIPXEL"
 
 [Setup]
 AppId={{8F2C9E1A-4B6D-4E1F-9C3A-2D7B5F0A61C4}
@@ -15,7 +15,7 @@ DefaultDirName={localappdata}\Programs\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=installer_output
-OutputBaseFilename=PixelClean_Setup
+OutputBaseFilename=Clipxel_Setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -36,7 +36,7 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "desktopicon"; Description: "Crear un acceso directo en el Escritorio"; GroupDescription: "Accesos directos:"; Flags: unchecked
 
 [Files]
-Source: "dist\PixelClean\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\Clipxel\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
