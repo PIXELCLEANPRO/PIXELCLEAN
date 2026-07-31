@@ -318,6 +318,15 @@ class Api:
         with self._actualizacion_lock:
             descarga_url = self._actualizacion.get("descarga_url")
             ya_instalando = self._actualizacion.get("instalando")
+        if not descarga_url and not ya_instalando:
+            # El chequeo de arranque puede haber pillado el release justo
+            # antes de que terminara de subirse el instalador (carrera con
+            # el momento de publicacion en GitHub). Reintentamos una vez en
+            # vivo en lugar de quedarnos con el "no hay URL" guardado.
+            self._revisar_actualizacion_en_fondo()
+            with self._actualizacion_lock:
+                descarga_url = self._actualizacion.get("descarga_url")
+                ya_instalando = self._actualizacion.get("instalando")
         if not descarga_url:
             return {"ok": False, "error": "No hay una URL de descarga disponible todavia."}
         if ya_instalando:
