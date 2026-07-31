@@ -1,0 +1,75 @@
+/* Selector de idioma + banner de sugerencia — compartido por todas las paginas/idiomas */
+.lang-switch { position: relative; }
+.lang-btn {
+  font-family: var(--font-display, -apple-system, sans-serif);
+  font-weight: 600;
+  font-size: 13.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border, rgba(255,255,255,.4));
+  background: var(--panel-2, rgba(255,255,255,.3));
+  color: var(--ink, #1d1d1f);
+  cursor: pointer;
+}
+.lang-btn:hover { background: var(--panel, rgba(255,255,255,.5)); }
+.lang-btn .car { font-size: 9px; opacity: .7; }
+.lang-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 168px;
+  background: var(--panel, #fff);
+  border: 1px solid var(--glass-border, rgba(0,0,0,.1));
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.18);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  padding: 6px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 50;
+}
+.lang-menu.open { display: flex; }
+.lang-menu a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 14px;
+  text-decoration: none;
+  color: var(--ink, #1d1d1f);
+}
+.lang-menu a:hover { background: var(--panel-2, rgba(0,0,0,.05)); }
+.lang-menu a.current { color: var(--signal, #0071e3); font-weight: 650; }
+.lang-menu a.current::after { content: "✓"; font-size: 12px; }
+
+.lang-suggest {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  flex-wrap: wrap;
+  background: var(--panel-2, rgba(0,113,227,.08));
+  border-bottom: 1px solid var(--glass-border, rgba(0,0,0,.08));
+  padding: 10px 20px;
+  font-family: var(--font-body, -apple-system, sans-serif);
+  font-size: 13.5px;
+  color: var(--ink, #1d1d1f);
+  text-align: center;
+}
+.lang-suggest a {
+  color: var(--signal, #0071e3);
+  font-weight: 650;
+  text-decoration: none;
+}
+.lang-suggest button {
+  border: none; background: none; cursor: pointer; color: var(--ink-faint, rgba(0,0,0,.4));
+  font-size: 16px; line-height: 1; padding: 2px 4px;
+}
+
+@media (max-width: 780px) {
+  .lang-btn span.lbl { display: none; }
+}
