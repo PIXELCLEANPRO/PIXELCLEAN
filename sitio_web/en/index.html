@@ -1,0 +1,891 @@
+<title>PixelClean Studio | Remove Burnt & Dead Pixels From Your Videos</title>
+<meta name="description" content="PixelClean Studio detects and repairs burnt or dead sensor pixels in your videos, frame by frame, 100% on your computer. Free download for Windows and macOS." />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://pixelcleanpro.github.io/en/" />
+<link rel="alternate" hreflang="es" href="https://pixelcleanpro.github.io/" />
+<link rel="alternate" hreflang="en" href="https://pixelcleanpro.github.io/en/" />
+<link rel="alternate" hreflang="x-default" href="https://pixelcleanpro.github.io/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="PixelClean Studio" />
+<meta property="og:title" content="PixelClean Studio | Remove Burnt & Dead Pixels From Your Videos" />
+<meta property="og:description" content="Detects and repairs burnt or dead sensor pixels in your videos, frame by frame, 100% on your computer." />
+<meta property="og:url" content="https://pixelcleanpro.github.io/en/" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:locale:alternate" content="es_ES" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="PixelClean Studio | Remove Burnt & Dead Pixels From Your Videos" />
+<meta name="twitter:description" content="Detects and repairs burnt or dead sensor pixels in your videos, frame by frame, 100% on your computer." />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%234c86ff'/%3E%3Cpolygon points='8 6 18 12 8 18' fill='white'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/assets/lang-switch.css" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "PixelClean Studio",
+  "operatingSystem": "Windows, macOS",
+  "applicationCategory": "MultimediaApplication",
+  "description": "Detects and repairs burnt or dead sensor pixels in videos, frame by frame, 100% on the user's computer.",
+  "url": "https://pixelcleanpro.github.io/en/",
+  "offers": [
+    { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
+    { "@type": "Offer", "name": "Pro", "price": "20", "priceCurrency": "USD" }
+  ]
+}
+</script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5750366535948261"
+     crossorigin="anonymous"></script>
+<script
+  src="https://www.paypal.com/sdk/js?client-id=BAAMVIRZEQcDj5agIU_iIHZGaGHxizZwT3SgZsWd1WIMLpKNx1ODKr9zLeAkFWiMbiePigpedTyZ0Qg4rA&components=hosted-buttons&disable-funding=venmo&currency=USD">
+</script>
+
+<style>
+  /* ---------- tokens ---------- */
+  :root {
+    --ink: #1d1d1f;
+    --ink-soft: rgba(29, 29, 31, .64);
+    --ink-faint: rgba(29, 29, 31, .4);
+    --paper: #eef1f8;
+    --panel: rgba(255, 255, 255, .5);
+    --panel-2: rgba(255, 255, 255, .3);
+    --line: rgba(20, 20, 40, .1);
+    --signal: #0071e3;
+    --signal-ink: #ffffff;
+    --accent-2: #8b5cf6;
+    --accent-3: #12b8ab;
+    --stuck: #12a454;
+    --glass-border: rgba(255, 255, 255, .6);
+    --blob-opacity: .4;
+    --shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 1px 2px rgba(20, 20, 40, .05), 0 30px 60px -18px rgba(20, 20, 40, .22);
+
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+
+    --wrap: 1180px;
+    --r-lg: 28px;
+    --r-md: 20px;
+    --r-sm: 13px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f5f5f7;
+      --ink-soft: rgba(245, 245, 247, .68);
+      --ink-faint: rgba(245, 245, 247, .42);
+      --paper: #0b0c10;
+      --panel: rgba(32, 33, 40, .45);
+      --panel-2: rgba(32, 33, 40, .3);
+      --line: rgba(255, 255, 255, .12);
+      --signal: #409cff;
+      --signal-ink: #06070a;
+      --accent-2: #a78bfa;
+      --accent-3: #2fe0cf;
+      --stuck: #4be890;
+      --glass-border: rgba(255, 255, 255, .14);
+      --blob-opacity: .6;
+      --shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .4), 0 30px 60px -18px rgba(0, 0, 0, .6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #f5f5f7; --ink-soft: rgba(245, 245, 247, .68); --ink-faint: rgba(245, 245, 247, .42);
+    --paper: #0b0c10; --panel: rgba(32, 33, 40, .45); --panel-2: rgba(32, 33, 40, .3); --line: rgba(255, 255, 255, .12);
+    --signal: #409cff; --signal-ink: #06070a; --accent-2: #a78bfa; --accent-3: #2fe0cf; --stuck: #4be890;
+    --glass-border: rgba(255, 255, 255, .14); --blob-opacity: .6;
+    --shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .4), 0 30px 60px -18px rgba(0, 0, 0, .6);
+  }
+  :root[data-theme="light"] {
+    --ink: #1d1d1f; --ink-soft: rgba(29, 29, 31, .64); --ink-faint: rgba(29, 29, 31, .4);
+    --paper: #eef1f8; --panel: rgba(255, 255, 255, .5); --panel-2: rgba(255, 255, 255, .3); --line: rgba(20, 20, 40, .1);
+    --signal: #0071e3; --signal-ink: #ffffff; --accent-2: #8b5cf6; --accent-3: #12b8ab; --stuck: #12a454;
+    --glass-border: rgba(255, 255, 255, .6); --blob-opacity: .4;
+    --shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 1px 2px rgba(20, 20, 40, .05), 0 30px 60px -18px rgba(20, 20, 40, .22);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    isolation: isolate;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -15%;
+    z-index: -1;
+    background:
+      radial-gradient(32% 34% at 18% 22%, var(--signal) 0%, transparent 72%),
+      radial-gradient(36% 38% at 88% 12%, var(--accent-2) 0%, transparent 72%),
+      radial-gradient(40% 42% at 46% 92%, var(--accent-3) 0%, transparent 72%);
+    filter: blur(90px) saturate(160%);
+    opacity: var(--blob-opacity);
+    animation: drift 42s ease-in-out infinite alternate;
+  }
+  @keyframes drift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(-3%, 3%, 0) scale(1.06); }
+  }
+  @media (prefers-reduced-motion: reduce) { body::before { animation: none; } }
+
+  h1, h2, h3, .display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0;
+    color: var(--ink);
+  }
+  p { margin: 0; }
+  a { color: inherit; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--signal);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--stuck);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--stuck) 25%, transparent);
+    flex-shrink: 0;
+  }
+
+  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 28px; }
+  section { position: relative; }
+
+  /* ---------- glass ---------- */
+  .glass {
+    background: var(--panel);
+    border: 1px solid var(--glass-border);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    backdrop-filter: blur(28px) saturate(180%);
+    box-shadow: var(--shadow);
+  }
+
+  .btn {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14.5px;
+    letter-spacing: 0;
+    border-radius: 999px;
+    padding: 13px 24px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform .18s ease, filter .18s ease, background .18s ease, box-shadow .18s ease;
+    text-decoration: none;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--signal), var(--accent-2));
+    color: var(--signal-ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 10px 24px -8px color-mix(in srgb, var(--signal) 65%, transparent);
+  }
+  .btn-primary:hover { filter: brightness(1.07); }
+  .btn-ghost {
+    background: var(--panel-2);
+    color: var(--ink);
+    border-color: var(--glass-border);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+  .btn-ghost:hover { background: var(--panel); }
+
+  /* ---------- nav ---------- */
+  header.nav {
+    position: sticky; top: 0; z-index: 40;
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    background: color-mix(in srgb, var(--paper) 55%, transparent);
+    border-bottom: 1px solid var(--glass-border);
+  }
+  .nav-row { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+  .brand { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
+  .brand svg { color: var(--signal); }
+  .nav-links { display: flex; gap: 30px; font-family: var(--font-display); font-weight: 590; font-size: 14px; }
+  .nav-links a { color: var(--ink-soft); text-decoration: none; transition: color .15s; }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-cta { display: flex; gap: 10px; align-items: center; }
+  @media (max-width: 780px) { .nav-links { display: none; } }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 88px 0 96px; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
+  @media (max-width: 920px) { .hero-grid { grid-template-columns: 1fr; } }
+
+  .hero h1 { font-size: clamp(38px, 5.4vw, 66px); line-height: 1.05; margin: 16px 0 22px; }
+  .hero h1 em { font-style: normal; background: linear-gradient(120deg, var(--signal), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero .lede { font-size: 19px; color: var(--ink-soft); max-width: 46ch; margin-bottom: 18px; }
+  .hero-highlight {
+    display: inline-block; font-family: var(--font-display); font-weight: 650; font-size: 15.5px;
+    color: var(--ink); background: var(--panel-2); border: 1px solid var(--glass-border);
+    border-radius: 999px; padding: 9px 18px; margin-bottom: 26px; max-width: 46ch;
+  }
+  .hero .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  .hero .fine {
+    font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint);
+    display: flex; align-items: center; gap: 8px; letter-spacing: .02em;
+  }
+  .hero .fine svg { color: var(--stuck); }
+
+  /* ---------- pricing (hero) ---------- */
+  .pricing-hero { display: flex; flex-direction: column; gap: 16px; }
+  .price-card { border-radius: var(--r-lg); padding: 28px 26px; }
+  .price-pro { border-color: color-mix(in srgb, var(--signal) 45%, var(--glass-border)); }
+  .price-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .price-name { font-family: var(--font-display); font-weight: 700; font-size: 17px; }
+  .price-tag { font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); border: 1px solid var(--glass-border); border-radius: 999px; padding: 3px 10px; }
+  .price-tag-pro { color: var(--signal-ink); background: linear-gradient(135deg, var(--signal), var(--accent-2)); border-color: transparent; }
+  .price-amount { font-family: var(--font-display); font-weight: 700; font-size: 40px; letter-spacing: -0.02em; margin-bottom: 8px; }
+  .price-amount span { font-size: 15px; font-weight: 600; color: var(--ink-faint); letter-spacing: 0; }
+  .price-desc { color: var(--ink-soft); font-size: 14.5px; margin-bottom: 18px; }
+  .price-list { list-style: none; margin: 0 0 22px; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+  .price-list li { font-size: 14px; color: var(--ink-soft); padding-left: 22px; position: relative; }
+  .price-list li::before { content: "✓"; position: absolute; left: 0; color: var(--stuck); font-weight: 700; }
+  .price-card .btn { width: 100%; justify-content: center; }
+  .paypal-btn-wrap { width: 100%; min-height: 45px; }
+  .paypal-fallback { font-size: 13px; color: var(--ink-faint); line-height: 1.5; margin: 0; }
+
+  /* ---------- payment modal ---------- */
+  .pago-overlay {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(6, 7, 10, .55);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    opacity: 0; pointer-events: none; transition: opacity .22s ease;
+  }
+  .pago-overlay.open { opacity: 1; pointer-events: auto; }
+  .pago-modal {
+    width: 100%; max-width: 380px; border-radius: var(--r-lg); padding: 30px 28px 26px;
+    text-align: center; position: relative;
+    transform: translateY(10px) scale(.97); transition: transform .22s ease;
+  }
+  .pago-overlay.open .pago-modal { transform: translateY(0) scale(1); }
+  .pago-close {
+    position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%;
+    background: var(--panel-2); border: 1px solid var(--glass-border); color: var(--ink-soft); cursor: pointer;
+  }
+  .pago-close:hover { color: var(--ink); }
+  .pago-modal .eyebrow { justify-content: center; margin-bottom: 10px; }
+  .pago-modal h3 { font-size: 22px; margin-bottom: 10px; }
+  .pago-modal p { color: var(--ink-soft); font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+  .pago-modal .row { display: flex; flex-direction: column; gap: 10px; }
+  .pago-modal .row .btn { width: 100%; justify-content: center; }
+
+  /* ---------- reveal ---------- */
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.is-visible { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* ---------- section shell ---------- */
+  .section { padding: 78px 0; }
+  .section-head { max-width: 640px; margin-bottom: 44px; }
+  .section-head h2 { font-size: clamp(26px, 3vw, 36px); margin: 14px 0 12px; }
+  .section-head p { color: var(--ink-soft); font-size: 17px; }
+
+  /* ---------- steps ---------- */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  @media (max-width: 860px) { .steps { grid-template-columns: 1fr; } }
+  .step { border-radius: var(--r-md); padding: 28px 24px; position: relative; }
+  .step .n { font-family: var(--font-mono); font-size: 12px; color: var(--signal); letter-spacing: .08em; }
+  .step h3 { font-size: 18px; margin: 10px 0 8px; }
+  .step p { color: var(--ink-soft); font-size: 14.5px; }
+  .step .ic { width: 34px; height: 34px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; color: var(--signal); }
+
+  /* ---------- engines ---------- */
+  .engines { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 760px) { .engines { grid-template-columns: 1fr; } }
+  .engine { border-radius: var(--r-md); padding: 30px; }
+  .engine .tag {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-faint); border: 1px solid var(--glass-border); border-radius: 999px; padding: 3px 10px; display: inline-block;
+  }
+  .engine h3 { font-size: 22px; margin: 16px 0 10px; }
+  .engine p { color: var(--ink-soft); font-size: 15px; margin-bottom: 18px; }
+  .engine .bar-row { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); margin-bottom: 8px; }
+  .engine .bar { flex: 1; height: 5px; border-radius: 4px; background: var(--panel-2); overflow: hidden; }
+  .engine .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--signal), var(--accent-2)); border-radius: 4px; }
+
+  /* ---------- features ---------- */
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 860px) { .features { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .features { grid-template-columns: 1fr; } }
+  .feature { border-radius: var(--r-md); padding: 24px 22px; }
+  .feature .ic { color: var(--signal); margin-bottom: 14px; }
+  .feature h3 { font-size: 15.5px; font-family: var(--font-display); font-weight: 650; margin-bottom: 7px; letter-spacing: 0; }
+  .feature p { font-size: 14px; color: var(--ink-soft); }
+
+  /* ---------- compare ---------- */
+  .compare-shell { border-radius: var(--r-lg); padding: 8px; }
+  .compare {
+    position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 16/8.4; cursor: ew-resize; user-select: none; touch-action: none;
+  }
+  .compare canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .compare .after-mask { position: absolute; inset: 0; overflow: hidden; }
+  .compare .handle {
+    position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; left: 50%;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.2);
+  }
+  .compare .handle::after {
+    content: "⟷"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.85); color: #111;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 4px 14px rgba(0,0,0,.35);
+  }
+  .compare .label { position: absolute; top: 14px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: rgba(10,12,16,.5); border: 1px solid rgba(255,255,255,.25); color: #fff; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .compare .label.before { left: 14px; }
+  .compare .label.after { right: 14px; }
+  .compare-caption { display: flex; justify-content: space-between; align-items: center; padding: 14px 12px 8px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); }
+
+  /* ---------- faq ---------- */
+  .faq { max-width: 760px; border-radius: var(--r-md); padding: 8px 28px; }
+  details.faq-item { border-bottom: 1px solid var(--glass-border); padding: 20px 0; }
+  details.faq-item:last-child { border-bottom: none; }
+  details.faq-item summary {
+    cursor: pointer; list-style: none; font-family: var(--font-display); font-weight: 650; font-size: 16.5px;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  }
+  details.faq-item summary::-webkit-details-marker { display: none; }
+  details.faq-item summary::after { content: "+"; font-size: 20px; color: var(--signal); font-family: var(--font-display); flex-shrink: 0; transition: transform .2s ease; }
+  details.faq-item[open] summary::after { transform: rotate(45deg); }
+  details.faq-item p { color: var(--ink-soft); font-size: 15.5px; margin-top: 12px; max-width: 60ch; }
+
+  /* ---------- footer / cta ---------- */
+  .cta-band {
+    border-radius: var(--r-lg); padding: 56px 44px;
+    display: flex; justify-content: space-between; align-items: center; gap: 30px; flex-wrap: wrap;
+  }
+  .cta-band h2 { font-size: clamp(24px, 3vw, 32px); max-width: 22ch; }
+  footer { padding: 40px 0 60px; }
+  .foot-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; padding-top: 36px; margin-top: 8px; border-top: 1px solid var(--glass-border); }
+  .foot-links { display: flex; gap: 26px; font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint); }
+  .foot-links a { text-decoration: none; }
+  .foot-links a:hover { color: var(--ink); }
+  .foot-note { font-family: var(--font-mono); font-size: 12px; color: var(--ink-faint); }
+
+  /* ---------- ads: collapse when Google has nothing to show ---------- */
+  ins.adsbygoogle[data-ad-status="unfilled"] { display: none !important; }
+  .ad-wrap:has(ins.adsbygoogle[data-ad-status="unfilled"]) { display: none !important; }
+
+</style>
+
+<header class="nav">
+  <div class="wrap nav-row">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+      PixelClean Studio
+    </div>
+    <nav class="nav-links">
+      <a href="#como-funciona">How it works</a>
+      <a href="instalacion.html">Installation</a>
+      <a href="como-usar.html">How to use</a>
+      <a href="#motores">Engines</a>
+      <a href="#preguntas">FAQ</a>
+    </nav>
+    <div class="nav-cta">
+      <div id="langSwitchMount"></div>
+      <a class="btn btn-primary" href="instalacion.html">Download</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow">Sensor repair · 100% local</span>
+        <h1>A <em>burnt pixel</em> shouldn't cost you the shot.</h1>
+        <p class="lede">PixelClean Studio detects and removes burnt or dead sensor pixels across all your videos, from a single reference. Mark the defect once and the app automatically repairs every frame of the clip — without uploading a single file to the internet.</p>
+        <p class="hero-highlight">Mark the defect once. It fixes itself, in every frame of the video.</p>
+        <div class="ctas">
+          <a class="btn btn-primary" href="instalacion.html">Download</a>
+        </div>
+        <div class="fine">
+          <svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg>
+          Tested on Sony A7III · works with any clip where you can photograph the defect
+        </div>
+      </div>
+
+      <div class="pricing-hero reveal" id="precios">
+        <div class="price-card glass">
+          <div class="price-top">
+            <span class="price-name">Free</span>
+            <span class="price-tag">No cost</span>
+          </div>
+          <div class="price-amount">$0</div>
+          <p class="price-desc">Up to 5 clips per day. Ideal for trying the app or fixing a one-off defect.</p>
+          <ul class="price-list">
+            <li>Both repair engines</li>
+            <li>Full brush mask tool</li>
+            <li>Camera metadata and live preview</li>
+          </ul>
+          <a class="btn btn-ghost" href="instalacion.html">Download</a>
+        </div>
+        <div class="price-card price-pro glass">
+          <div class="price-top">
+            <span class="price-name">Pro</span>
+            <span class="price-tag price-tag-pro">One-time payment</span>
+          </div>
+          <div class="price-amount">$20 <span>USD</span></div>
+          <p class="price-desc">Unlimited clips per day, forever. No subscription.</p>
+          <ul class="price-list">
+            <li>Everything in the Free plan</li>
+            <li>No daily clip limit</li>
+            <li>Unrestricted batch processing</li>
+          </ul>
+          <button class="btn btn-primary" id="btnComprarPro">Buy Pro</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="pago-overlay" id="pagoOverlay">
+    <div class="pago-modal glass">
+      <button class="pago-close" id="pagoClose" aria-label="Close">✕</button>
+      <span class="eyebrow">PixelClean Pro</span>
+      <h3>Pay $20 USD</h3>
+      <p>One-time payment, no subscription. After confirming on PayPal you'll receive your key by email shortly.</p>
+      <div id="paypal-container-DPBYFXST9DGP6" class="paypal-btn-wrap">
+        <p class="paypal-fallback" id="paypalCargando">Loading payment button...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var intentos = 0;
+      function intentarRenderPaypal() {
+        intentos++;
+        if (window.paypal && window.paypal.HostedButtons) {
+          document.getElementById("paypalCargando").remove();
+          paypal.HostedButtons({ hostedButtonId: "DPBYFXST9DGP6" }).render("#paypal-container-DPBYFXST9DGP6");
+        } else if (intentos < 20) {
+          setTimeout(intentarRenderPaypal, 300);
+        } else {
+          document.getElementById("paypalCargando").innerHTML =
+            "Couldn't load the PayPal button (might be an ad blocker). " +
+            "Disable it for this site and reload the page, or contact us.";
+        }
+      }
+      intentarRenderPaypal();
+    })();
+    var pagoOverlay = document.getElementById("pagoOverlay");
+    document.getElementById("btnComprarPro").addEventListener("click", function () {
+      pagoOverlay.classList.add("open");
+    });
+    document.getElementById("pagoClose").addEventListener("click", function () {
+      pagoOverlay.classList.remove("open");
+    });
+    pagoOverlay.addEventListener("click", function (e) {
+      if (e.target === pagoOverlay) pagoOverlay.classList.remove("open");
+    });
+    window.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") pagoOverlay.classList.remove("open");
+    });
+  </script>
+
+  <section class="section" id="cuando-sirve">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Is this for you?</span>
+        <h2>When does PixelClean Studio help?</h2>
+        <p>If your situation matches any of these, it was made exactly for this.</p>
+      </div>
+      <div class="features reveal">
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></div>
+          <h3>Hot sensor pixels</h3>
+          <p>The classic bright dot that always shows up in the same spot, especially in long exposures or night shots.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
+          <h3>Dead sensor pixels</h3>
+          <p>A black or signal-less dot that got stuck after a knock, a drop, or simple wear.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.5 5.5L19 9l-5.5 1.5L12 16l-1.5-5.5L5 9l5.5-1.5z"/></svg></div>
+          <h3>Laser-damaged sensor</h3>
+          <p>Stage lights, projectors, or laser pointers that burn an exact spot on the sensor.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2s7 8.5 7 13a7 7 0 0 1-14 0c0-4.5 7-13 7-13z"/></svg></div>
+          <h3>Night recordings</h3>
+          <p>The higher the ISO, the more hot pixels stand out — and in video, they show up in every single frame.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></div>
+          <h3>Same spot, throughout the video</h3>
+          <p>If the defect always appears in the same position in the frame, a single mask fixes it across every frame.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+          <h3>Footage that can't be reshot</h3>
+          <p>A one-of-a-kind take, an event that already happened — when reshooting isn't an option.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="como-funciona">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">The wizard</span>
+        <h2>Mark it once. It's fixed in every frame.</h2>
+        <p>No touching up frame by frame: the same flow you see when you open the app is four steps — pick the clip, mark the defect once, choose the repair engine, and process the whole batch.</p>
+      </div>
+      <div class="steps reveal">
+        <div class="step glass">
+          <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h5l2 2h9v10H4z"/></svg></div>
+          <div class="n">01 · Clip</div>
+          <h3>Load your videos</h3>
+          <p>Drag your clips into the window or pick them from the file browser. PixelClean Studio reads the camera metadata automatically.</p>
+        </div>
+        <div class="step glass">
+          <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></div>
+          <div class="n">02 · Mask</div>
+          <h3>Mark the defect once</h3>
+          <p>With an adjustable brush (size, hardness, opacity) you paint over the burnt pixel on a single sample frame.</p>
+        </div>
+        <div class="step glass">
+          <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.55 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.55-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.55-1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34H9a1.7 1.7 0 001-1.55V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.55 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87V9a1.7 1.7 0 001.55 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.55 1z"/></svg></div>
+          <div class="n">03 · Engine &amp; quality</div>
+          <h3>Pick engine and speed</h3>
+          <p>Gaussian blur for a quick preview, or OpenCV inpainting for maximum quality. Live before/after preview.</p>
+        </div>
+        <div class="step glass">
+          <div class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          <div class="n">04 · Process</div>
+          <h3>Repair the whole batch</h3>
+          <p>Applies the mask to every frame of the clip, automatically. You can cancel at any time without leaving half-finished files.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="motores">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Two ways to repair</span>
+        <h2>Pick speed or precision, frame by frame.</h2>
+        <p>Both engines live in the same app — try one, switch to the other, and the preview updates instantly.</p>
+      </div>
+      <div class="engines reveal">
+        <div class="engine glass">
+          <span class="tag">engine · blur</span>
+          <h3>Gaussian blur</h3>
+          <p>The fastest option for removing the defect in uniform areas (sky, wall, blurred background) or for a first review pass over the whole batch.</p>
+          <div class="bar-row"><span>Speed</span></div>
+          <div class="bar"><i style="width:92%"></i></div>
+          <div class="bar-row" style="margin-top:12px"><span>Texture accuracy</span></div>
+          <div class="bar"><i style="width:45%"></i></div>
+        </div>
+        <div class="engine glass">
+          <span class="tag">engine · opencv inpaint</span>
+          <h3>Inpainting reconstruction</h3>
+          <p>Rebuilds the texture using information from neighboring pixels (Telea algorithm). Ideal when the defect falls on detail, edges, or complex textures.</p>
+          <div class="bar-row"><span>Speed</span></div>
+          <div class="bar"><i style="width:48%"></i></div>
+          <div class="bar-row" style="margin-top:12px"><span>Texture accuracy</span></div>
+          <div class="bar"><i style="width:90%"></i></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="comparar">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Drag the slider</span>
+        <h2>The same frame, before and after.</h2>
+        <p>This is what the live preview looks like inside the app while you adjust brush and engine — drag the handle to compare.</p>
+      </div>
+      <div class="compare-shell glass reveal">
+        <div class="compare" id="compareBox">
+          <canvas id="beforeCanvas" width="1280" height="672"></canvas>
+          <div class="after-mask" id="afterMask">
+            <canvas id="afterCanvas" width="1280" height="672"></canvas>
+          </div>
+          <span class="label before">Before</span>
+          <span class="label after">After</span>
+          <div class="handle" id="handle"></div>
+        </div>
+        <div class="compare-caption">
+          <span>frame_00214.png</span>
+          <span id="splitReadout">50% · repaired</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="funciones">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Under the hood</span>
+        <h2>Real retouching tools, not a magic button.</h2>
+        <p>Everything you need to get the clip export-ready, without leaving the app.</p>
+      </div>
+      <div class="features reveal">
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+          <h3>Live before/after preview</h3>
+          <p>See the result of the chosen engine as you paint, before processing a single real frame.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></div>
+          <h3>Batch processing</h3>
+          <p>One mask applies to every clip that shares the same sensor defect, one after another.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg></div>
+          <h3>100% local</h3>
+          <p>Your clips never leave your computer: no upload, no account, no server involved.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="15" height="12" rx="2"/><path d="M18 10l4-2v8l-4-2"/></svg></div>
+          <h3>File data, always visible</h3>
+          <p>Duration, resolution, frame rate and format, real and verified — plus ISO, lens, or color profile when your camera recorded them in the file.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg></div>
+          <h3>Brush with size, hardness and opacity</h3>
+          <p>Just like a photo editor: adjust each parameter with draggable number fields or keyboard shortcuts.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15V6a2 2 0 00-2-2H5a2 2 0 00-2 2v9m18 0H3m18 0l-2.5 5h-13L3 15"/></svg></div>
+          <h3>Drag and drop clips</h3>
+          <p>Drop files straight onto the window. You can also pick them from the usual file browser.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div>
+          <h3>Cancel anytime</h3>
+          <p>Stop processing at any point in the batch; partial files clean themselves up.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+          <h3>Undo and redo</h3>
+          <p>Full brushstroke history while you build the mask, with zoom and pan to move around the frame.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg></div>
+          <h3>Light and dark mode</h3>
+          <p>The interface starts in dark mode by default and switches instantly, easy on the eyes while editing.</p>
+        </div>
+        <div class="feature glass">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0z"/><path d="M12 7v5l3 3"/></svg></div>
+          <h3>Professional processing</h3>
+          <p>PixelClean Studio uses FFmpeg as its internal engine to guarantee compatibility with the most common video formats, no extra installs needed.</p>
+        </div>
+        <div class="ad-wrap" style="grid-column: 1 / -1">
+          <ins class="adsbygoogle"
+               style="display:block"
+               data-ad-format="fluid"
+               data-ad-layout-key="-fb+5w+4e-db+86"
+               data-ad-client="ca-pub-5750366535948261"
+               data-ad-slot="7139265162"></ins>
+          <script>
+               (adsbygoogle = window.adsbygoogle || []).push({});
+          </script>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="que-no-hace">
+    <div class="wrap">
+      <div class="cta-band glass reveal" style="flex-direction:column;align-items:flex-start;text-align:left">
+        <span class="eyebrow">So you know what to expect</span>
+        <h2 style="margin-top:12px">PixelClean Studio doesn't replace a sensor repair.</h2>
+        <p style="color:var(--ink-soft);font-size:15.5px;margin-top:14px;max-width:66ch">It's designed to remove permanent, fixed-position defects that appear in the same spot in every frame. It doesn't fix lens dirt, blur, image noise, or moving objects — for that, this tool isn't the right one.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="preguntas">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Before installing</span>
+        <h2>Frequently asked questions</h2>
+      </div>
+      <div class="faq glass reveal">
+        <details class="faq-item" open>
+          <summary>Do I need to know how to code or install Python?</summary>
+          <p>No. The Windows installer bundles everything, ffmpeg included. It installs like any other program and opens from the Start menu.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Do my videos get uploaded to a server?</summary>
+          <p>Never. All processing runs on your own computer. PixelClean Studio doesn't need an internet connection.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="section ad-wrap" style="padding: 0 0 40px">
+    <div class="wrap">
+      <ins class="adsbygoogle"
+           style="display:block; text-align:center;"
+           data-ad-layout="in-article"
+           data-ad-format="fluid"
+           data-ad-client="ca-pub-5750366535948261"
+           data-ad-slot="6975347700"></ins>
+      <script>
+           (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+  </section>
+
+  <section class="section" id="preguntas-cont" style="padding-top:0">
+    <div class="wrap">
+      <div class="faq glass reveal">
+        <details class="faq-item">
+          <summary>Does it work with cameras other than the Sony A7III?</summary>
+          <p>Yes. It was first tested on the A7III because that's where the original defect appeared, but the mask brush and both repair engines work with any clip where you can photograph the damaged spot, regardless of the pixel's color.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What happens if I cancel mid-batch?</summary>
+          <p>The clip being processed at that moment is discarded along with its partial file; clips already finished stay saved.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Which engine should I use?</summary>
+          <p>Start with Blur to quickly check the mask is well placed across the whole batch, then switch to OpenCV Inpainting for the final export.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="descarga">
+    <div class="wrap">
+      <div class="cta-band glass reveal">
+        <h2>A burnt pixel shouldn't ruin the shot.</h2>
+        <div class="ctas">
+          <a class="btn btn-primary" href="instalacion.html">Download</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <div class="brand">
+        <svg width="18" height="18" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/></svg>
+        PixelClean Studio
+      </div>
+      <nav class="foot-links">
+        <a href="instalacion.html">Installation</a>
+        <a href="como-usar.html">How to use</a>
+        <a href="#motores">Engines</a>
+        <a href="#preguntas">FAQ</a>
+      </nav>
+      <span class="foot-note">Local sensor repair · Windows · macOS</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---- scroll reveal ---- */
+  var els = document.querySelectorAll(".reveal");
+  if ("IntersectionObserver" in window && !REDUCED) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("is-visible"); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.14 });
+    els.forEach(function (el) { io.observe(el); });
+  } else {
+    els.forEach(function (el) { el.classList.add("is-visible"); });
+  }
+
+  /* ---- before / after compare ---- */
+  function paintScene(ctx, W, H, withDefects) {
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#101a2e");
+    g.addColorStop(0.55, "#1b2f4d");
+    g.addColorStop(1, "#0c1420");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    var g2 = ctx.createRadialGradient(W * 0.72, H * 0.28, 20, W * 0.72, H * 0.28, W * 0.55);
+    g2.addColorStop(0, "rgba(255,196,120,0.35)");
+    g2.addColorStop(1, "rgba(255,196,120,0)");
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = "rgba(6,10,18,0.55)";
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.62);
+    for (var x = 0; x <= W; x += W / 10) {
+      ctx.lineTo(x, H * 0.62 + Math.sin(x * 0.01) * 14);
+    }
+    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+    ctx.fill();
+
+    if (withDefects) {
+      var pts = [[214,118],[540,240],[860,90],[300,340],[700,410],[120,260],[960,300],[430,80]];
+      pts.forEach(function (p) {
+        var px = (p[0] / 1280) * W, py = (p[1] / 672) * H;
+        ctx.save();
+        ctx.shadowColor = "#59ff8f";
+        ctx.shadowBlur = 16;
+        ctx.fillStyle = "#59ff8f";
+        ctx.beginPath();
+        ctx.arc(px, py, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+  }
+
+  var bc = document.getElementById("beforeCanvas");
+  var ac = document.getElementById("afterCanvas");
+  paintScene(bc.getContext("2d"), bc.width, bc.height, true);
+  paintScene(ac.getContext("2d"), ac.width, ac.height, false);
+
+  var box = document.getElementById("compareBox");
+  var mask = document.getElementById("afterMask");
+  var handle = document.getElementById("handle");
+  var readout = document.getElementById("splitReadout");
+
+  function setSplit(pct) {
+    pct = Math.max(0, Math.min(100, pct));
+    mask.style.clipPath = "inset(0 0 0 " + pct + "%)";
+    handle.style.left = pct + "%";
+    readout.textContent = Math.round(100 - pct) + "% after · repaired";
+  }
+  setSplit(50);
+
+  var dragging = false;
+  function fromEvent(e) {
+    var rect = box.getBoundingClientRect();
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    return ((clientX - rect.left) / rect.width) * 100;
+  }
+  box.addEventListener("pointerdown", function (e) { dragging = true; setSplit(fromEvent(e)); });
+  window.addEventListener("pointermove", function (e) { if (dragging) setSplit(fromEvent(e)); });
+  window.addEventListener("pointerup", function () { dragging = false; });
+})();
+</script>
+<script src="/assets/lang-switch.js" defer></script>
