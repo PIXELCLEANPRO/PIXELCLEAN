@@ -6,9 +6,11 @@
 // Deploy: Dashboard de Supabase -> Edge Functions -> paypal-webhook -> pegar
 // este archivo como index.ts. Secrets necesarios (Edge Functions -> Secrets):
 //   PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_WEBHOOK_ID,
-//   RESEND_API_KEY, RESEND_FROM (opcional), NOTIFICATION_EMAIL (opcional)
+//   GMAIL_USER, GMAIL_APP_PASSWORD, NOTIFICATION_EMAIL (opcional)
 // SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY los provee Supabase solo, no hace
 // falta configurarlos a mano.
+
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const PAYPAL_API = "https://api-m.paypal.com";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -64,20 +66,28 @@ async function obtenerEmailComprador(resource: any, accessToken: string) {
 }
 
 async function enviarEmail({ to, subject, html }: { to: string[]; subject: string; html: string }) {
-  const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendKey) return; // sin key configurada, no rompe el webhook
-  const from = Deno.env.get("RESEND_FROM") || "CLIPXEL <onboarding@resend.dev>";
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendKey}`,
-      "Content-Type": "application/json",
+  const gmailUser = Deno.env.get("GMAIL_USER");
+  const gmailPass = Deno.env.get("GMAIL_APP_PASSWORD");
+  if (!gmailUser || !gmailPass) return; // sin credenciales configuradas, no rompe el webhook
+
+  const client = new SMTPClient({
+    connection: {
+      hostname: "smtp.gmail.com",
+      port: 465,
+      tls: true,
+      auth: { username: gmailUser, password: gmailPass },
     },
-    body: JSON.stringify({ from, to, subject, html }),
   });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error("Fallo el envio de email: " + err);
+  try {
+    await client.send({
+      from: `CLIPXEL Studio <${gmailUser}>`,
+      to,
+      subject,
+      html,
+      content: "auto",
+    });
+  } finally {
+    await client.close();
   }
 }
 

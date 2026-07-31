@@ -52,7 +52,35 @@
     <span class="plan-badge" id="btnPlan">Gratis</span>
     <div class="steps" id="steps"></div>
     <div class="theme-switcher">
-      <button class="icon-toggle" id="btnLicencia" title="Mi cuenta"><svg width="15" height="15"><use href="#i-key"/></svg></button>
+      <div class="cuenta-wrap">
+        <button class="cuenta-avatar" id="btnCuenta" title="Mi cuenta"><span id="cuentaInicial">?</span></button>
+        <div class="cuenta-pop" id="cuentaPop">
+          <div class="cuenta-pop-head">
+            <div class="cuenta-avatar cuenta-avatar-lg"><span id="cuentaInicialGrande">?</span></div>
+            <div>
+              <div class="cuenta-email" id="cuentaEmail">—</div>
+              <span class="chip-plan" id="cuentaChipPlan">Gratis</span>
+            </div>
+          </div>
+          <button class="cuenta-item" id="btnAbrirDispositivos">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+            Dispositivos
+          </button>
+          <button class="cuenta-item" id="btnAbrirReporte">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Reportar un problema
+          </button>
+          <a class="cuenta-item" href="https://clipxel.github.io/cuenta.html" target="_blank" rel="noopener">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Administrar cuenta (web)
+          </a>
+          <div class="cuenta-sep"></div>
+          <button class="cuenta-item cuenta-item-danger" id="btnCerrarSesionCuenta">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
       <div class="notif-wrap">
         <button class="icon-toggle" id="btnNotif" title="Actualizaciones">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
@@ -62,6 +90,7 @@
           <div class="notif-empty" id="notifEmpty">No hay actualizaciones pendientes.</div>
           <div class="notif-update" id="notifUpdate" style="display:none">
             <p>Version <b id="updateVersion"></b> disponible.</p>
+            <pre class="notif-changelog" id="updateChangelog" style="display:none"></pre>
             <button class="btn btn-primary" id="btnActualizar">Actualizar ahora</button>
             <p class="notif-status" id="updateStatus"></p>
           </div>
@@ -248,25 +277,31 @@
 
 <div class="brush-cursor" id="brushCursor"></div>
 
-<div class="licencia-overlay" id="licenciaOverlay">
-  <div class="licencia-modal card">
-    <button class="licencia-close" id="licenciaClose" aria-label="Cerrar">✕</button>
-    <div class="licencia-icon"><svg width="20" height="20"><use href="#i-key"/></svg></div>
-    <h3>Mi cuenta</h3>
-    <p class="licencia-status" id="licenciaStatus"></p>
-    <div id="licenciaSesionOff">
-      <button class="btn btn-primary" id="licenciaLoginGoogle" style="width:100%;justify-content:center;gap:8px">
-        <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6 29.6 4 24 4c-7.6 0-14.1 4.3-17.7 10.7z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.6c-2 1.5-4.6 2.5-7.6 2.5-5.2 0-9.6-3.3-11.3-7.9l-6.6 5.1C9.8 39.6 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.6 5.6C40.9 36.5 44 30.8 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
-        Continuar con Google
-      </button>
-    </div>
-    <div id="licenciaSesionOn" style="display:none">
-      <p class="licencia-status" id="licenciaEmailActivo" style="opacity:.7"></p>
-      <button class="btn btn-ghost" id="licenciaCerrarSesion" style="width:100%;justify-content:center">Cerrar sesión</button>
-    </div>
-    <p class="licencia-msg" id="licenciaMsg"></p>
+<div class="licencia-overlay" id="dispositivosOverlay">
+  <div class="licencia-modal card" style="max-width:420px;text-align:left">
+    <button class="licencia-close" id="dispositivosClose" aria-label="Cerrar">✕</button>
+    <h3 style="text-align:center">Tus dispositivos</h3>
+    <p class="licencia-status" id="dispositivosStatus" style="text-align:center">Cargando...</p>
+    <div id="dispositivosList"></div>
+  </div>
+</div>
+
+<div class="licencia-overlay" id="reporteOverlay">
+  <div class="licencia-modal card" style="max-width:440px;text-align:left">
+    <button class="licencia-close" id="reporteClose" aria-label="Cerrar">✕</button>
+    <h3 style="text-align:center">Reportar un problema</h3>
+    <p class="licencia-status" style="text-align:center">Contanos qué pasó. Se manda tu mensaje junto con datos técnicos para ayudarte más rápido.</p>
+    <textarea id="reporteTexto" class="reporte-textarea" rows="5" placeholder="Describí el problema..."></textarea>
+    <label class="reporte-check">
+      <input type="checkbox" id="reporteIncluirLog" checked>
+      Adjuntar el registro (log) de la app
+    </label>
+    <button class="btn btn-ghost" id="reporteAdjuntar" style="width:100%;justify-content:center;margin-top:8px">Adjuntar captura de pantalla...</button>
+    <p class="reporte-adjunto-nombre" id="reporteAdjuntoNombre"></p>
+    <p class="licencia-msg" id="reporteMsg"></p>
     <div class="licencia-actions">
-      <button class="btn btn-ghost" id="licenciaCancelar">Cerrar</button>
+      <button class="btn btn-ghost" id="reporteCancelar">Cancelar</button>
+      <button class="btn btn-primary" id="reporteEnviar">Enviar reporte</button>
     </div>
   </div>
 </div>
