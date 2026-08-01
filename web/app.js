@@ -91,6 +91,7 @@ const mockApi = {
   reportar_error: async () => ({ok: false, error: "Modo de prueba en navegador."}),
   obtener_estado_actualizacion: async () => ({hay_actualizacion: false}),
   instalar_actualizacion: async () => ({ok: false, error: "Modo de prueba en navegador: la auto-instalacion solo funciona en la app real."}),
+  confirmar_actualizacion: async () => ({ok: false, error: "Modo de prueba en navegador."}),
   _carpetaSalidaMock: null,
   obtener_carpeta_salida: async () => ({carpeta: mockApi._carpetaSalidaMock}),
   elegir_carpeta_salida: async () => {
@@ -164,6 +165,9 @@ gateBtn.addEventListener("click", async () => {
 chequearSesion();
 
 /* ---------------- Campanita de actualizaciones ---------------- */
+let _actualizacionListaMostrada = false;
+const actualizacionListaOverlay = document.getElementById("actualizacionListaOverlay");
+
 async function revisarActualizacion() {
   try {
     const estado = await api.obtener_estado_actualizacion();
@@ -182,11 +186,40 @@ async function revisarActualizacion() {
         }
       }
     }
+    // El instalador se descarga solo en segundo plano, pero nunca cierra
+    // la app sin avisar -- cuando queda listo, se le pregunta al usuario
+    // si quiere reiniciar ahora o mas tarde. No se vuelve a mostrar en la
+    // misma sesion si ya eligio "Mas tarde".
+    if (estado && estado.listo_para_instalar && !estado.instalando && !_actualizacionListaMostrada
+        && !actualizacionListaOverlay.classList.contains("open")) {
+      _actualizacionListaMostrada = true;
+      document.getElementById("alVersion").textContent = estado.version_nueva || "";
+      document.getElementById("alMsg").textContent = "";
+      actualizacionListaOverlay.classList.add("open");
+    }
   } catch (err) {
     // sin internet o api no disponible todavia: no molestamos
   }
 }
 setTimeout(revisarActualizacion, 4000);
+setInterval(revisarActualizacion, 30000);
+
+document.getElementById("alMasTarde").addEventListener("click", () => {
+  actualizacionListaOverlay.classList.remove("open");
+});
+document.getElementById("alReiniciarAhora").addEventListener("click", async () => {
+  const btn = document.getElementById("alReiniciarAhora");
+  const msg = document.getElementById("alMsg");
+  btn.disabled = true;
+  msg.textContent = "Cerrando para actualizar...";
+  msg.className = "licencia-msg";
+  const resultado = await api.confirmar_actualizacion().catch((err) => ({ok: false, error: String(err)}));
+  if (!resultado.ok) {
+    btn.disabled = false;
+    msg.textContent = resultado.error || "No se pudo actualizar.";
+    msg.className = "licencia-msg err";
+  }
+});
 
 const notifPop = document.getElementById("notifPop");
 document.getElementById("btnNotif").addEventListener("click", (e) => {

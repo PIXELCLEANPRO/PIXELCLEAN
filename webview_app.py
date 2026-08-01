@@ -66,7 +66,7 @@ LIMITE_GRATIS_DIARIO = 5
 SUPABASE_URL = "https://ujuibmpvicuibidkbdrq.supabase.co"
 SUPABASE_ANON_KEY = "sb_publishable_x3mWkJJdqcimXIVkgbHEUA_-TWxzxtf"
 
-VERSION_APP = "2.4.1"
+VERSION_APP = "2.4.2"
 URL_ULTIMA_VERSION = "https://api.github.com/repos/clipxel/clipxel.github.io/releases/latest"
 URL_PAGINA_DESCARGA = "https://clipxel.github.io"
 
@@ -673,17 +673,74 @@ class Api:
                         "changelog": datos.get("body") or "",
                         "instalando": False,
                     }
-                # Se instala sola, sin que el usuario tenga que apretar nada -- salvo
-                # que haya un procesamiento en curso en ese momento, para no perder
-                # trabajo. Si esta procesando, se reintenta cuando termine el lote
-                # (ver el finally de _procesar_todo_worker).
+                # El instalador se descarga solo en segundo plano (no molesta
+                # al usuario) -- salvo que haya un procesamiento en curso, para
+                # no competir por ancho de banda/disco con un lote activo (se
+                # reintenta cuando termine, ver el finally de
+                # _procesar_todo_worker). Pero NUNCA se lanza el instalador ni
+                # se cierra la app sola: eso requiere que el usuario confirme
+                # explicitamente (ver confirmar_actualizacion), porque cerrar
+                # de golpe sin avisar puede pisar trabajo sin guardar.
                 if descarga_url:
                     with self._progreso_lock:
                         procesando = not self.progreso.get("terminado", True)
                     if not procesando:
-                        self._descargar_e_instalar(descarga_url)
+                        self._descargar_instalador_en_fondo(descarga_url)
         except Exception:
             pass  # sin internet o GitHub caido: no molestamos al usuario
+
+    def _descargar_instalador_en_fondo(self, descarga_url):
+        """Descarga el instalador nuevo a una carpeta temporal y lo deja
+        listo, pero sin lanzarlo ni cerrar la app -- solo marca
+        listo_para_instalar=True para que el frontend le pregunte al usuario
+        si quiere reiniciar ahora."""
+        try:
+            import urllib.request
+            import tempfile
+            ruta_temp = os.path.join(tempfile.gettempdir(), "Clipxel_Setup_actualizacion.exe")
+            urllib.request.urlretrieve(descarga_url, ruta_temp)
+            with self._actualizacion_lock:
+                self._actualizacion["ruta_instalador"] = ruta_temp
+                self._actualizacion["listo_para_instalar"] = True
+        except Exception as e:
+            with self._actualizacion_lock:
+                self._actualizacion["error"] = str(e)
+
+    def confirmar_actualizacion(self):
+        """El usuario confirmo (desde el dialogo de 'actualizacion lista' o
+        la campanita) que quiere cerrar la app ahora para terminar de
+        instalar. Si ya se descargo en segundo plano, solo falta lanzar el
+        instalador y cerrar; si no, se descarga ahora mismo antes de cerrar."""
+        with self._actualizacion_lock:
+            ruta_instalador = self._actualizacion.get("ruta_instalador")
+            descarga_url = self._actualizacion.get("descarga_url")
+        if ruta_instalador and os.path.isfile(ruta_instalador):
+            return self._lanzar_instalador_y_cerrar(ruta_instalador)
+        if not descarga_url:
+            self._revisar_actualizacion_en_fondo()
+            with self._actualizacion_lock:
+                descarga_url = self._actualizacion.get("descarga_url")
+        if not descarga_url:
+            return {"ok": False, "error": "No hay una URL de descarga disponible todavia."}
+        return self._descargar_e_instalar(descarga_url)
+
+    def _lanzar_instalador_y_cerrar(self, ruta_instalador):
+        try:
+            with self._actualizacion_lock:
+                self._actualizacion["instalando"] = True
+            import subprocess
+            subprocess.Popen(
+                [ruta_instalador, "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-"],
+                close_fds=True,
+                creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+            )
+            threading.Thread(target=self._cerrar_para_actualizar, daemon=True).start()
+            return {"ok": True}
+        except Exception as e:
+            with self._actualizacion_lock:
+                self._actualizacion["instalando"] = False
+                self._actualizacion["error"] = str(e)
+            return {"ok": False, "error": str(e)}
 
     def _descargar_e_instalar(self, descarga_url):
         """Descarga el instalador nuevo y lo lanza en modo silencioso; el
@@ -716,26 +773,14 @@ class Api:
             return {"ok": False, "error": str(e)}
 
     def instalar_actualizacion(self):
-        """Disparador manual (botón de la campanita): normalmente la
-        actualizacion ya se instalo sola en segundo plano, pero esto sirve
-        para forzarla de nuevo si quedo pendiente por un procesamiento activo."""
+        """Disparador manual (botón de la campanita o del dialogo de
+        actualizacion lista): el usuario ya confirmo explicitamente que
+        quiere cerrar la app ahora para actualizar."""
         with self._actualizacion_lock:
-            descarga_url = self._actualizacion.get("descarga_url")
             ya_instalando = self._actualizacion.get("instalando")
-        if not descarga_url and not ya_instalando:
-            # El chequeo de arranque puede haber pillado el release justo
-            # antes de que terminara de subirse el instalador (carrera con
-            # el momento de publicacion en GitHub). Reintentamos una vez en
-            # vivo en lugar de quedarnos con el "no hay URL" guardado.
-            self._revisar_actualizacion_en_fondo()
-            with self._actualizacion_lock:
-                descarga_url = self._actualizacion.get("descarga_url")
-                ya_instalando = self._actualizacion.get("instalando")
-        if not descarga_url:
-            return {"ok": False, "error": "No hay una URL de descarga disponible todavia."}
         if ya_instalando:
             return {"ok": True}
-        return self._descargar_e_instalar(descarga_url)
+        return self.confirmar_actualizacion()
 
     def _cerrar_para_actualizar(self):
         import time
