@@ -66,7 +66,7 @@ LIMITE_GRATIS_DIARIO = 5
 SUPABASE_URL = "https://ujuibmpvicuibidkbdrq.supabase.co"
 SUPABASE_ANON_KEY = "sb_publishable_x3mWkJJdqcimXIVkgbHEUA_-TWxzxtf"
 
-VERSION_APP = "2.4.0"
+VERSION_APP = "2.4.1"
 URL_ULTIMA_VERSION = "https://api.github.com/repos/clipxel/clipxel.github.io/releases/latest"
 URL_PAGINA_DESCARGA = "https://clipxel.github.io"
 
@@ -1294,7 +1294,7 @@ def main():
         titulo_ventana,
         f"http://127.0.0.1:{puerto}/index.html",
         js_api=api, width=1280, height=820, min_size=(1040, 700),
-        background_color="#0b0d12",
+        background_color="#0b0d12", maximized=True,
     )
     api.set_ventana(ventana)
     threading.Thread(target=_personalizar_titlebar_windows, args=(titulo_ventana,), daemon=True).start()

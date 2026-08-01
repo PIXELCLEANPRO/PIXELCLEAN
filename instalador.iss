@@ -2,7 +2,7 @@
 ; Empaqueta la build de PyInstaller (dist\Clipxel) en un instalador standalone.
 
 #define MyAppName "CLIPXEL Studio"
-#define MyAppVersion "2.4.0"
+#define MyAppVersion "2.4.1"
 #define MyAppExeName "Clipxel.exe"
 #define MyAppPublisher "CLIPXEL"
 

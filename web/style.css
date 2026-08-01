@@ -313,6 +313,7 @@ body::before {
   backdrop-filter: blur(20px) saturate(180%);
   display: flex; flex-direction: column; align-items: center; padding: 14px 0; gap: 6px; flex-shrink: 0;
   border-right: 1px solid var(--glass-border);
+  position: relative; z-index: 5;
 }
 .tool-btn {
   width: 38px; height: 38px; border-radius: 10px; background: transparent; border: none; cursor: pointer;
@@ -339,15 +340,114 @@ body::before {
 .realce-row input[type="range"] { flex: 1; min-width: 0; }
 .realce-pop .btn { width: 100%; justify-content: center; margin-top: 2px; }
 
-.tool-btn .tip {
-  position: absolute; left: 48px; top: 50%; transform: translateY(-50%) translateX(-4px);
-  background: rgba(15,16,22,.9); color: #fff; font-size: 11px; padding: 5px 9px; border-radius: 7px;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.15s var(--ease), transform 0.15s var(--ease);
-  box-shadow: var(--shadow-pop); z-index: 20;
+/* El .tip de cada boton NUNCA se muestra in-situ (display:none) -- solo
+   sirve como fuente de contenido (innerHTML) para la capa flotante unica
+   #tooltipFlotante, ver mas abajo. Se hace asi porque en la app de
+   escritorio (WebView2) el <video> a veces se compone en una capa de
+   hardware que ignora el z-index normal del resto del DOM, sin importar
+   cuanto se suba el z-index de un ancestro -- un elemento position:fixed
+   pegado directo al <body> es lo unico que gana de forma confiable. */
+.tool-btn .tip { display: none; }
+.tooltip-flotante {
+  position: fixed; z-index: 99999; pointer-events: none;
+  background: rgba(15,16,22,.94); color: #fff; padding: 10px 12px 11px; border-radius: 10px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  width: 190px; white-space: normal; opacity: 0;
+  transition: opacity 0.12s var(--ease);
+  box-shadow: var(--shadow-pop);
+  display: flex; flex-direction: column; gap: 5px;
 }
-.tool-btn:hover .tip { opacity: 1; transform: translateY(-50%) translateX(0); }
+.tooltip-flotante.visible { opacity: 1; }
+.tip-title { font-size: 12px; font-weight: 700; color: #fff; }
+.tip-desc { font-size: 10.5px; line-height: 1.4; color: rgba(255,255,255,.68); }
+.tip-atajo {
+  align-self: flex-start; font-size: 10px; font-weight: 700; letter-spacing: .02em;
+  color: var(--accent); background: rgba(255,255,255,.08); padding: 2px 7px; border-radius: 5px;
+}
+.tip-demo {
+  margin-top: 2px; width: 100%; height: 40px; border-radius: 6px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.tip-demo svg { width: 100%; height: 100%; overflow: visible; }
+.tip-demo svg * { animation-play-state: paused; }
+.tooltip-flotante.visible .tip-demo svg * { animation-play-state: running; }
+
+/* pincel: punto que recorre un trazo y va dejando estela */
+.tip-demo-brush .tip-demo-trail {
+  fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round;
+  stroke-dasharray: 100; stroke-dashoffset: 100; animation: tipTrail 1.8s ease-in-out infinite;
+}
+.tip-demo-brush .tip-demo-dot { fill: #fff; animation: tipDotBrush 1.8s ease-in-out infinite; }
+@keyframes tipTrail { 0%, 8% { stroke-dashoffset: 100; } 85%, 100% { stroke-dashoffset: 0; } }
+@keyframes tipDotBrush {
+  0% { offset-distance: 0%; cx: 12px; cy: 28px; }
+  0%, 8% { transform: translate(0, 0); }
+  50% { transform: translate(38px, -10px); }
+  85%, 100% { transform: translate(76px, -14px); }
+}
+
+/* goma: el cursor avanza y la franja detras va "comiendo" la linea */
+.tip-demo-eraser .tip-demo-line { fill: rgba(255,255,255,.45); }
+.tip-demo-eraser .tip-demo-trail { fill: #1c1e26; animation: tipEraseTrail 1.8s ease-in-out infinite; }
+.tip-demo-eraser .tip-demo-square {
+  fill: none; stroke: #ff6666; stroke-width: 2;
+  animation: tipEraseSquare 1.8s ease-in-out infinite;
+}
+@keyframes tipEraseTrail { 0%, 10% { width: 0; } 90%, 100% { width: 84px; } }
+@keyframes tipEraseSquare { 0%, 10% { transform: translateX(0); } 90%, 100% { transform: translateX(82px); } }
+
+/* mano: punto que arrastra la grilla de fondo */
+.tip-demo-hand .tip-demo-grid line { stroke: rgba(255,255,255,.18); stroke-width: 1; animation: tipHandGrid 1.8s ease-in-out infinite; }
+.tip-demo-hand .tip-demo-dot { fill: var(--accent); animation: tipHandDot 1.8s ease-in-out infinite; }
+@keyframes tipHandGrid { 0%, 15% { transform: translateX(0); } 50% { transform: translateX(14px); } 85%, 100% { transform: translateX(-10px); } }
+@keyframes tipHandDot { 0%, 15% { transform: translateX(0); } 50% { transform: translateX(14px); } 85%, 100% { transform: translateX(-10px); } }
+
+/* rotar */
+.tip-demo-rotate-l .tip-demo-frame { fill: none; stroke: var(--accent); stroke-width: 2; transform-origin: 20px 20px; animation: tipRotateL 1.8s ease-in-out infinite; }
+.tip-demo-rotate-r .tip-demo-frame { fill: none; stroke: var(--accent); stroke-width: 2; transform-origin: 20px 20px; animation: tipRotateR 1.8s ease-in-out infinite; }
+@keyframes tipRotateL { 0%, 15% { transform: rotate(0deg); } 60%, 100% { transform: rotate(-90deg); } }
+@keyframes tipRotateR { 0%, 15% { transform: rotate(0deg); } 60%, 100% { transform: rotate(90deg); } }
+
+/* cargar / bajar png */
+.tip-demo-upload .tip-demo-tray, .tip-demo-download .tip-demo-tray { fill: none; stroke: rgba(255,255,255,.5); stroke-width: 2; }
+.tip-demo-upload .tip-demo-arrow { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; animation: tipUpload 1.6s ease-in-out infinite; }
+.tip-demo-download .tip-demo-arrow-down { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; animation: tipDownload 1.6s ease-in-out infinite; }
+@keyframes tipUpload { 0%, 8% { transform: translateY(9px); opacity: .35; } 45% { transform: translateY(0); opacity: 1; } 92%, 100% { transform: translateY(-9px); opacity: .35; } }
+@keyframes tipDownload { 0%, 8% { transform: translateY(-9px); opacity: .35; } 45% { transform: translateY(0); opacity: 1; } 92%, 100% { transform: translateY(9px); opacity: .35; } }
+
+/* guardar plantilla: check que aparece */
+.tip-demo-save .tip-demo-frame { fill: none; stroke: rgba(255,255,255,.55); stroke-width: 2; }
+.tip-demo-save .tip-demo-check {
+  fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 20; stroke-dashoffset: 20; animation: tipCheck 1.8s ease-in-out infinite;
+}
+@keyframes tipCheck { 0%, 20% { stroke-dashoffset: 20; } 55%, 80% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 20; } }
+
+/* mis plantillas: celdas que se resaltan en secuencia */
+.tip-demo-templates .tip-demo-cell { fill: rgba(255,255,255,.3); stroke: rgba(255,255,255,.4); stroke-width: 1; animation: tipCellPulse 1.8s ease-in-out infinite; }
+.tip-demo-templates .c1 { animation-delay: 0s; }
+.tip-demo-templates .c2 { animation-delay: .3s; }
+.tip-demo-templates .c3 { animation-delay: .6s; }
+.tip-demo-templates .c4 { animation-delay: .9s; }
+@keyframes tipCellPulse { 0%, 100% { fill: rgba(255,255,255,.3); } 20% { fill: var(--accent); } 40% { fill: rgba(255,255,255,.3); } }
+
+/* resaltar: sol pulsando */
+.tip-demo-sun .tip-demo-sun-core { fill: var(--accent); animation: tipSunPulse 1.8s ease-in-out infinite; transform-origin: 20px 20px; }
+.tip-demo-sun .tip-demo-sun-rays line { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; animation: tipSunPulse 1.8s ease-in-out infinite; }
+.tip-demo-sun .tip-demo-sun-rays { transform-origin: 20px 20px; }
+@keyframes tipSunPulse { 0%, 100% { transform: scale(0.85); opacity: .55; } 50% { transform: scale(1.1); opacity: 1; } }
+
+/* zoom in / out: lupa que escala */
+.tip-demo-zoomin .tip-demo-glass, .tip-demo-zoomout .tip-demo-glass { fill: none; stroke: var(--accent); stroke-width: 2.5; transform-origin: 17px 17px; }
+.tip-demo-zoomin .tip-demo-handle, .tip-demo-zoomout .tip-demo-handle { stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; transform-origin: 17px 17px; }
+.tip-demo-zoomin .tip-demo-plus { fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; transform-origin: 17px 17px; }
+.tip-demo-zoomout .tip-demo-minus { fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; transform-origin: 17px 17px; }
+.tip-demo-zoomin .tip-demo-glass, .tip-demo-zoomin .tip-demo-handle, .tip-demo-zoomin .tip-demo-plus { animation: tipZoomIn 1.8s ease-in-out infinite; }
+.tip-demo-zoomout .tip-demo-glass, .tip-demo-zoomout .tip-demo-handle, .tip-demo-zoomout .tip-demo-minus { animation: tipZoomOut 1.8s ease-in-out infinite; }
+@keyframes tipZoomIn { 0%, 15% { transform: scale(0.8); } 60%, 100% { transform: scale(1.15); } }
+@keyframes tipZoomOut { 0%, 15% { transform: scale(1.15); } 60%, 100% { transform: scale(0.8); } }
 
 .canvas-zone { flex: 1; display: flex; flex-direction: column; background: var(--bg-canvas); min-width: 0; position: relative; }
 

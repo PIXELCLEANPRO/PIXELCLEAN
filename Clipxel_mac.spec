@@ -61,7 +61,7 @@ app = BUNDLE(
     info_plist={
         'CFBundleName': 'Clipxel',
         'CFBundleDisplayName': 'CLIPXEL Studio',
-        'CFBundleShortVersionString': '2.4.0',
+        'CFBundleShortVersionString': '2.4.1',
         'NSHighResolutionCapable': 'True',
     },
 )

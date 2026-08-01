@@ -10,12 +10,11 @@ const state = {
   frameW: 1280, frameH: 720,
   duracionSeg: 0,
   tool: "brush",
+  altErasing: false,
   brushSize: 28,
   hardness: 100,
   opacity: 100,
   angleFine: 0,
-  spacePanning: false,
-  toolBeforeSpace: null,
   zoom: {mascara: 1, motor: 1},
   pan: {mascara: {x: 0, y: 0}},
   fitScale: {mascara: 1},
@@ -480,6 +479,7 @@ async function abrirPlantillas() {
       const r = await api.obtener_plantilla(p.id).catch((err) => ({ ok: false, error: String(err) }));
       if (r.ok) {
         restaurarDesde(r.plantilla.mascara_b64);
+        fijarMascaraBase(r.plantilla.mascara_b64);
         pushHistory();
         plantillasOverlay.classList.remove("open");
       } else {
@@ -751,6 +751,7 @@ async function cambiarClipReferencia(ruta) {
   state.duracionSeg = datos.duracion_seg || 0;
   cargarFrameMuestra(datos);
   if (!_metaCache[ruta]) _metaCache[ruta] = {metadata: datos.metadata};
+  document.getElementById("selectClipReferencia").value = ruta;
 }
 
 document.getElementById("selectClipReferencia").addEventListener("change", (e) => {
@@ -893,6 +894,40 @@ document.getElementById("btnPlayPause").addEventListener("click", () => {
 });
 videoFrame.addEventListener("play", () => { document.getElementById("iconPlayPause").innerHTML = '<use href="#i-pause"/>'; });
 videoFrame.addEventListener("pause", () => { document.getElementById("iconPlayPause").innerHTML = '<use href="#i-play"/>'; });
+
+/* ---------------- Modo de reproduccion: repetir el clip o pasar al siguiente ---------------- */
+const btnModoReproduccion = document.getElementById("btnModoReproduccion");
+state.modoReproduccion = localStorage.getItem("clipxel_modo_reproduccion") || "repetir";
+
+function pintarModoReproduccion() {
+  if (state.modoReproduccion === "siguiente") {
+    btnModoReproduccion.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>';
+    btnModoReproduccion.title = "Al terminar: pasar al siguiente clip";
+  } else {
+    btnModoReproduccion.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>';
+    btnModoReproduccion.title = "Al terminar: repetir este clip";
+  }
+}
+pintarModoReproduccion();
+
+btnModoReproduccion.addEventListener("click", () => {
+  state.modoReproduccion = state.modoReproduccion === "repetir" ? "siguiente" : "repetir";
+  localStorage.setItem("clipxel_modo_reproduccion", state.modoReproduccion);
+  pintarModoReproduccion();
+});
+
+videoFrame.addEventListener("ended", () => {
+  if (state.modoReproduccion === "siguiente") {
+    const indiceActual = state.clips.indexOf(state.clipReferencia);
+    const siguiente = state.clips[(indiceActual + 1) % state.clips.length];
+    if (siguiente && siguiente !== state.clipReferencia) {
+      cambiarClipReferencia(siguiente).then(() => videoFrame.play());
+      return;
+    }
+  }
+  videoFrame.currentTime = 0;
+  videoFrame.play();
+});
 // El seek en si es instantaneo (nativo del navegador). Cuando el usuario se
 // asienta en una posicion (evento "seeked", no en cada frame del arrastre),
 // se le avisa a Python en segundo plano para que el cuadro de referencia de
@@ -976,17 +1011,75 @@ function setTool(tool) {
     b.classList.toggle("active", b.dataset.tool === tool);
   });
   viewport.classList.toggle("pan-mode", tool === "hand");
+  document.getElementById("barOpcionesPincel").style.visibility = (tool === "brush" || tool === "eraser") ? "visible" : "hidden";
   actualizarCursorPincel();
 }
 document.querySelectorAll("#toolbarMascara .tool-btn[data-tool]").forEach(b => {
   b.addEventListener("click", () => setTool(b.dataset.tool));
 });
 
+/* ---------------- Tooltips de herramientas: capa flotante unica ----------------
+   El <video> del editor a veces se compone en una capa de hardware de
+   WebView2 que ignora el z-index del resto del DOM -- ningun z-index de un
+   ancestro del tooltip alcanza contra eso. Por eso el tooltip real de cada
+   boton (span.tip) nunca se muestra en su lugar: al pasar el mouse se copia
+   su contenido a #tooltipFlotante, un unico elemento position:fixed pegado
+   al final del <body>, y se lo posiciona a mano. */
+const tooltipFlotante = document.getElementById("tooltipFlotante");
+document.querySelectorAll("#toolbarMascara .tool-btn").forEach((btn) => {
+  const fuente = btn.querySelector(".tip");
+  if (!fuente) return;
+  btn.addEventListener("mouseenter", () => {
+    tooltipFlotante.innerHTML = fuente.innerHTML;
+    const accionAtajo = btn.dataset.atajo;
+    if (accionAtajo && typeof atajos !== "undefined" && atajos[accionAtajo]) {
+      const linea = document.createElement("span");
+      linea.className = "tip-atajo";
+      linea.textContent = "Atajo: " + nombreCombo(atajos[accionAtajo]);
+      tooltipFlotante.appendChild(linea);
+    }
+    const r = btn.getBoundingClientRect();
+    const anchoTip = 190;
+    let top = r.top + r.height / 2 - 60;
+    top = Math.max(8, Math.min(top, window.innerHeight - 200));
+    tooltipFlotante.style.left = (r.right + 10) + "px";
+    tooltipFlotante.style.top = top + "px";
+    tooltipFlotante.style.maxWidth = anchoTip + "px";
+    tooltipFlotante.classList.add("visible");
+  });
+  btn.addEventListener("mouseleave", () => tooltipFlotante.classList.remove("visible"));
+});
+
 function actualizarCursorPincel() {
-  const visible = state.tool === "brush" || state.tool === "eraser";
+  const visible = (state.tool === "brush" || state.tool === "eraser") && !state.ctrlPanTemporal;
   brushCursor.style.display = visible ? "block" : "none";
-  brushCursor.style.borderColor = state.tool === "eraser" ? "#ff6666" : "#ffffff";
+  const borrando = state.tool === "eraser" || (state.tool === "brush" && state.altErasing);
+  brushCursor.style.borderColor = borrando ? "#ff6666" : "#ffffff";
 }
+
+// Ctrl+click izquierdo mueve la vista como la herramienta Mano, sin
+// cambiar la herramienta activa (asi no hay que ir y volver del pincel).
+window.addEventListener("keydown", (e) => {
+  if ((e.key === "Control" || e.key === "Meta") && !state.ctrlPanTemporal) {
+    state.ctrlPanTemporal = true;
+    viewport.classList.add("pan-mode");
+    actualizarCursorPincel();
+  }
+});
+window.addEventListener("keyup", (e) => {
+  if ((e.key === "Control" || e.key === "Meta") && state.ctrlPanTemporal) {
+    state.ctrlPanTemporal = false;
+    if (state.tool !== "hand") viewport.classList.remove("pan-mode");
+    actualizarCursorPincel();
+  }
+});
+window.addEventListener("blur", () => {
+  if (state.ctrlPanTemporal) {
+    state.ctrlPanTemporal = false;
+    if (state.tool !== "hand") viewport.classList.remove("pan-mode");
+    actualizarCursorPincel();
+  }
+});
 
 function coordsAImagen(clientX, clientY) {
   const rect = cnvMask.getBoundingClientRect();
@@ -1054,7 +1147,7 @@ viewport.addEventListener("mousedown", (e) => {
     brushCursor.style.width = brushCursor.style.height = diametro0 + "px";
     return;
   }
-  if (state.tool === "hand") {
+  if (state.tool === "hand" || ((e.ctrlKey || e.metaKey) && e.button === 0)) {
     state.isPanning = true;
     state.panStart = {x: e.clientX, y: e.clientY, px: state.pan.mascara.x, py: state.pan.mascara.y};
     viewport.classList.add("panning");
@@ -1076,7 +1169,8 @@ function estamparDab(x, y) {
   const radio = state.brushSize;
   const dureza = state.hardness / 100;
   const opacidad = state.opacity / 100;
-  ctxMask.globalCompositeOperation = (state.tool === "eraser") ? "destination-out" : "source-over";
+  const borrando = state.tool === "eraser" || (state.tool === "brush" && state.altErasing);
+  ctxMask.globalCompositeOperation = borrando ? "destination-out" : "source-over";
   // el radio interior tiene que ser siempre menor al exterior: si son iguales (dureza 100%)
   // el gradiente queda degenerado y algunos motores de renderizado no pintan nada.
   const radioInterior = Math.max(0, Math.min(radio * dureza, radio - 0.5));
@@ -1226,7 +1320,14 @@ document.getElementById("btnLoadPng").addEventListener("click", async () => {
   const resultado = await api.elegir_mascara_png(state.frameW, state.frameH);
   if (!resultado) return;
   const img = new Image();
-  img.onload = () => { ctxMask.clearRect(0, 0, cnvMask.width, cnvMask.height); ctxMask.drawImage(img, 0, 0, cnvMask.width, cnvMask.height); cnvMask.style.opacity = "0.55"; pushHistory(); actualizarPreview("mascara"); };
+  img.onload = () => {
+    ctxMask.clearRect(0, 0, cnvMask.width, cnvMask.height);
+    ctxMask.drawImage(img, 0, 0, cnvMask.width, cnvMask.height);
+    cnvMask.style.opacity = "0.55";
+    fijarMascaraBase(cnvMask.toDataURL());
+    pushHistory();
+    actualizarPreview("mascara");
+  };
   img.src = resultado;
 });
 
@@ -1285,6 +1386,117 @@ document.getElementById("btnResetRealce").addEventListener("click", () => {
   document.getElementById("sliderContraste").value = 100;
   document.getElementById("sliderSaturacion").value = 100;
   videoFrame.style.filter = "none";
+});
+
+/* ---------------- Ajustar mascara cargada: calado, extender/reducir, opacidad ---------------- */
+const ajusteMascaraPop = document.getElementById("ajusteMascaraPop");
+const btnAjustarMascara = document.getElementById("btnAjustarMascara");
+document.body.appendChild(ajusteMascaraPop);
+ajusteMascaraPop.style.position = "fixed";
+ajusteMascaraPop.style.zIndex = "99999";
+
+function posicionarAjusteMascaraPop() {
+  const r = btnAjustarMascara.getBoundingClientRect();
+  ajusteMascaraPop.style.left = (r.right + 10) + "px";
+  ajusteMascaraPop.style.top = r.top + "px";
+}
+btnAjustarMascara.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (!state.mascaraBase) state.mascaraBase = cnvMask.toDataURL();
+  posicionarAjusteMascaraPop();
+  ajusteMascaraPop.classList.toggle("open");
+});
+document.addEventListener("click", (e) => {
+  if (ajusteMascaraPop.classList.contains("open") && !ajusteMascaraPop.contains(e.target) && e.target !== btnAjustarMascara) {
+    ajusteMascaraPop.classList.remove("open");
+  }
+});
+
+// Guarda la mascara "original" (recien cargada, sin ajustes) para poder
+// recalcular calado/extender/opacidad desde cero cada vez que se mueve un
+// slider, en vez de ir degradando la imagen aplicando ajustes sobre ajustes.
+function fijarMascaraBase(dataUrl) {
+  state.mascaraBase = dataUrl;
+  document.getElementById("sliderCalado").value = 0;
+  document.getElementById("sliderExtender").value = 0;
+  document.getElementById("sliderOpacidadMascara").value = 100;
+}
+
+function _crecerMascara(canvasFuente, pasos) {
+  // Dilata pintando 8 copias desplazadas 1px con blend "lighter" (suma y
+  // satura en 255), repitiendo "pasos" veces -- una aproximacion barata a
+  // una dilatacion morfologica real, suficiente para uso visual.
+  let actual = canvasFuente;
+  const offs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  for (let i = 0; i < pasos; i++) {
+    const salida = document.createElement("canvas");
+    salida.width = canvasFuente.width; salida.height = canvasFuente.height;
+    const sctx = salida.getContext("2d");
+    sctx.drawImage(actual, 0, 0);
+    sctx.globalCompositeOperation = "lighter";
+    offs.forEach(([dx, dy]) => sctx.drawImage(actual, dx, dy));
+    actual = salida;
+  }
+  return actual;
+}
+
+function _invertirAlpha(canvasFuente) {
+  const salida = document.createElement("canvas");
+  salida.width = canvasFuente.width; salida.height = canvasFuente.height;
+  const sctx = salida.getContext("2d");
+  sctx.drawImage(canvasFuente, 0, 0);
+  const datos = sctx.getImageData(0, 0, salida.width, salida.height);
+  for (let i = 3; i < datos.data.length; i += 4) datos.data[i] = 255 - datos.data[i];
+  sctx.putImageData(datos, 0, 0);
+  return salida;
+}
+
+function aplicarAjustesMascara() {
+  if (!state.mascaraBase) return;
+  const img = new Image();
+  img.onload = () => {
+    let base = document.createElement("canvas");
+    base.width = cnvMask.width; base.height = cnvMask.height;
+    base.getContext("2d").drawImage(img, 0, 0);
+
+    const extender = Math.round(Number(document.getElementById("sliderExtender").value));
+    if (extender !== 0) {
+      const pasos = Math.abs(extender);
+      base = extender > 0
+        ? _crecerMascara(base, pasos)
+        : _invertirAlpha(_crecerMascara(_invertirAlpha(base), pasos));
+    }
+
+    const calado = Number(document.getElementById("sliderCalado").value);
+    if (calado > 0) {
+      const desenfocado = document.createElement("canvas");
+      desenfocado.width = base.width; desenfocado.height = base.height;
+      const dctx = desenfocado.getContext("2d");
+      dctx.filter = `blur(${calado}px)`;
+      dctx.drawImage(base, 0, 0);
+      base = desenfocado;
+    }
+
+    ctxMask.clearRect(0, 0, cnvMask.width, cnvMask.height);
+    ctxMask.globalAlpha = Number(document.getElementById("sliderOpacidadMascara").value) / 100;
+    ctxMask.drawImage(base, 0, 0);
+    ctxMask.globalAlpha = 1;
+    actualizarPreview("mascara");
+  };
+  img.src = state.mascaraBase;
+}
+document.getElementById("sliderCalado").addEventListener("input", aplicarAjustesMascara);
+document.getElementById("sliderExtender").addEventListener("input", aplicarAjustesMascara);
+document.getElementById("sliderOpacidadMascara").addEventListener("input", aplicarAjustesMascara);
+document.getElementById("sliderCalado").addEventListener("change", pushHistory);
+document.getElementById("sliderExtender").addEventListener("change", pushHistory);
+document.getElementById("sliderOpacidadMascara").addEventListener("change", pushHistory);
+document.getElementById("btnResetAjusteMascara").addEventListener("click", () => {
+  document.getElementById("sliderCalado").value = 0;
+  document.getElementById("sliderExtender").value = 0;
+  document.getElementById("sliderOpacidadMascara").value = 100;
+  aplicarAjustesMascara();
+  pushHistory();
 });
 
 window.addEventListener("resize", () => { if (state.step === 1) fitCanvasToViewport(); });
@@ -1677,43 +1889,189 @@ function resetearPasoProcesar() {
   document.getElementById("previewRenderPlaceholder").style.display = "block";
 }
 
-/* ---------------- Atajos de teclado estilo Photoshop (activos en el paso Mascara) ---------------- */
+/* ---------------- Atajos de teclado (estilo Photoshop, 100% personalizables) ---------------- */
+// Cada accion es un combo {key, ctrl}. Los defaults calcan los atajos de
+// Photoshop: B/E/H para herramientas, [ ] para tamano, Ctrl+Z/Y deshacer/
+// rehacer, Ctrl +/- /0 para zoom, Espacio para reproducir.
+const ATAJOS_DEFAULT = {
+  brush: { key: "b", ctrl: false },
+  eraser: { key: "e", ctrl: false },
+  hand: { key: "h", ctrl: false },
+  brushSmaller: { key: "[", ctrl: false },
+  brushBigger: { key: "]", ctrl: false },
+  hardnessSmaller: { key: "[", ctrl: false, shift: true },
+  hardnessBigger: { key: "]", ctrl: false, shift: true },
+  rotateLeft: { key: ",", ctrl: false },
+  rotateRight: { key: ".", ctrl: false },
+  undo: { key: "z", ctrl: true },
+  redo: { key: "y", ctrl: true },
+  zoomIn: { key: "=", ctrl: true },
+  zoomOut: { key: "-", ctrl: true },
+  zoomReset: { key: "0", ctrl: true },
+  playPause: { key: " ", ctrl: false },
+  loadPng: { key: "l", ctrl: false },
+  downloadPng: { key: "k", ctrl: false },
+  guardarPlantilla: { key: "g", ctrl: false },
+  misPlantillas: { key: "m", ctrl: false },
+  realce: { key: "r", ctrl: false },
+  ajustarMascara: { key: "a", ctrl: false },
+};
+const ATAJOS_LABELS = {
+  brush: "Pincel",
+  eraser: "Goma",
+  hand: "Mano (pan)",
+  brushSmaller: "Pincel mas chico",
+  brushBigger: "Pincel mas grande",
+  hardnessSmaller: "Dureza -",
+  hardnessBigger: "Dureza +",
+  rotateLeft: "Rotar a la izquierda",
+  rotateRight: "Rotar a la derecha",
+  undo: "Deshacer",
+  redo: "Rehacer",
+  zoomIn: "Acercar",
+  zoomOut: "Alejar",
+  zoomReset: "Ajustar zoom",
+  playPause: "Reproducir / pausar",
+  loadPng: "Cargar PNG",
+  downloadPng: "Bajar mascara como PNG",
+  guardarPlantilla: "Guardar como plantilla",
+  misPlantillas: "Mis plantillas guardadas",
+  realce: "Resaltar",
+  ajustarMascara: "Ajustar mascara cargada",
+};
+let atajos = JSON.parse(JSON.stringify(ATAJOS_DEFAULT));
+try {
+  const guardados = JSON.parse(localStorage.getItem("clipxel_atajos") || "{}");
+  Object.keys(ATAJOS_DEFAULT).forEach((accion) => { if (guardados[accion]) atajos[accion] = guardados[accion]; });
+} catch (e) { /* localStorage corrupto: se queda con los defaults */ }
+
+function guardarAtajos() {
+  localStorage.setItem("clipxel_atajos", JSON.stringify(atajos));
+}
+function restablecerAtajos() {
+  atajos = JSON.parse(JSON.stringify(ATAJOS_DEFAULT));
+  guardarAtajos();
+}
+function coincideAtajo(e, combo) {
+  return e.key.toLowerCase() === combo.key.toLowerCase()
+    && (e.ctrlKey || e.metaKey) === !!combo.ctrl
+    && e.shiftKey === !!combo.shift;
+}
+
 window.addEventListener("keydown", (e) => {
+  if (e.key === "Alt" && state.tool === "brush" && !state.altErasing) {
+    state.altErasing = true;
+    actualizarCursorPincel();
+  }
+
   if (state.step !== 1) return;
-  const ctrl = e.ctrlKey || e.metaKey;
+  const escribiendo = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
+  if (escribiendo) return;
 
-  if (e.code === "Space" && !state.spacePanning) {
-    state.spacePanning = true;
-    state.toolBeforeSpace = state.tool;
-    setTool("hand");
-    e.preventDefault();
-    return;
-  }
-  if (ctrl && e.key.toLowerCase() === "z") {
-    e.preventDefault();
-    if (e.shiftKey) rehacer();
-    else deshacer();
-    return;
-  }
-  if (ctrl && e.key.toLowerCase() === "y") { e.preventDefault(); rehacer(); return; }
-  if (ctrl && (e.key === "=" || e.key === "+")) { e.preventDefault(); cambiarZoom(0.2); return; }
-  if (ctrl && e.key === "-") { e.preventDefault(); cambiarZoom(-0.2); return; }
-  if (ctrl && e.key === "0") { e.preventDefault(); fitCanvasToViewport(); return; }
-  if (ctrl) return;
-
-  switch (e.key.toLowerCase()) {
-    case "b": setTool("brush"); break;
-    case "e": setTool("eraser"); break;
-    case "h": setTool("hand"); break;
-    case "[": e.shiftKey ? setHardness(state.hardness - 10) : setBrushSize(state.brushSize - 4); break;
-    case "]": e.shiftKey ? setHardness(state.hardness + 10) : setBrushSize(state.brushSize + 4); break;
-  }
+  if (coincideAtajo(e, atajos.playPause)) { e.preventDefault(); if (videoFrame.paused) videoFrame.play(); else videoFrame.pause(); return; }
+  if (coincideAtajo(e, atajos.undo)) { e.preventDefault(); deshacer(); return; }
+  if (coincideAtajo(e, atajos.redo)) { e.preventDefault(); rehacer(); return; }
+  if (coincideAtajo(e, atajos.zoomIn)) { e.preventDefault(); cambiarZoom(0.2); return; }
+  if (coincideAtajo(e, atajos.zoomOut)) { e.preventDefault(); cambiarZoom(-0.2); return; }
+  if (coincideAtajo(e, atajos.zoomReset)) { e.preventDefault(); fitCanvasToViewport(); return; }
+  if (coincideAtajo(e, atajos.rotateLeft)) { document.getElementById("btnRotateLeft").click(); return; }
+  if (coincideAtajo(e, atajos.rotateRight)) { document.getElementById("btnRotateRight").click(); return; }
+  if (coincideAtajo(e, atajos.loadPng)) { document.getElementById("btnLoadPng").click(); return; }
+  if (coincideAtajo(e, atajos.downloadPng)) { document.getElementById("btnBajarPng").click(); return; }
+  if (coincideAtajo(e, atajos.guardarPlantilla)) { document.getElementById("btnGuardarPlantilla").click(); return; }
+  if (coincideAtajo(e, atajos.misPlantillas)) { document.getElementById("btnMisPlantillas").click(); return; }
+  if (coincideAtajo(e, atajos.realce)) { document.getElementById("btnRealce").click(); return; }
+  if (coincideAtajo(e, atajos.ajustarMascara)) { document.getElementById("btnAjustarMascara").click(); return; }
+  if (coincideAtajo(e, atajos.brush)) { setTool("brush"); return; }
+  if (coincideAtajo(e, atajos.eraser)) { setTool("eraser"); return; }
+  if (coincideAtajo(e, atajos.hand)) { setTool("hand"); return; }
+  if (coincideAtajo(e, atajos.hardnessSmaller)) { setHardness(state.hardness - 10); return; }
+  if (coincideAtajo(e, atajos.hardnessBigger)) { setHardness(state.hardness + 10); return; }
+  if (coincideAtajo(e, atajos.brushSmaller)) { setBrushSize(state.brushSize - 4); return; }
+  if (coincideAtajo(e, atajos.brushBigger)) { setBrushSize(state.brushSize + 4); return; }
 });
 window.addEventListener("keyup", (e) => {
-  if (e.code === "Space" && state.spacePanning) {
-    state.spacePanning = false;
-    setTool(state.toolBeforeSpace || "brush");
+  if (e.key === "Alt" && state.altErasing) {
+    state.altErasing = false;
+    actualizarCursorPincel();
   }
+});
+// Si la ventana pierde el foco con Alt apretado (ej. alt-tab), el keyup de
+// Alt nunca llega -- sin esto el pincel se quedaba "pegado" en modo borrar.
+window.addEventListener("blur", () => {
+  if (state.altErasing) { state.altErasing = false; actualizarCursorPincel(); }
+});
+
+/* ---------------- Modal para reasignar atajos de teclado ---------------- */
+const atajosOverlay = document.getElementById("atajosOverlay");
+const atajosList = document.getElementById("atajosList");
+
+function nombreTeclaSimple(tecla) {
+  if (tecla === " ") return "Espacio";
+  if (tecla === "[") return "[";
+  if (tecla === "]") return "]";
+  return tecla.toUpperCase();
+}
+function nombreCombo(combo) {
+  const partes = [];
+  if (combo.ctrl) partes.push("Ctrl");
+  if (combo.shift) partes.push("Shift");
+  partes.push(nombreTeclaSimple(combo.key));
+  return partes.join("+");
+}
+function combosIguales(a, b) {
+  return a.key.toLowerCase() === b.key.toLowerCase() && !!a.ctrl === !!b.ctrl && !!a.shift === !!b.shift;
+}
+
+function pintarAtajos() {
+  atajosList.innerHTML = "";
+  Object.keys(ATAJOS_DEFAULT).forEach((accion) => {
+    const row = document.createElement("div");
+    row.className = "plantilla-row";
+    row.innerHTML = `
+      <div><div class="plantilla-nombre">${ATAJOS_LABELS[accion]}</div></div>
+      <button class="dispositivo-cerrar" data-accion="${accion}" style="min-width:60px">${nombreCombo(atajos[accion])}</button>
+    `;
+    atajosList.appendChild(row);
+  });
+
+  atajosList.querySelectorAll("button[data-accion]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const accion = btn.dataset.accion;
+      const anterior = btn.textContent;
+      btn.textContent = "...";
+      const capturar = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (["Control", "Meta", "Shift", "Alt"].includes(e.key)) return;
+        const nuevo = { key: e.key.toLowerCase(), ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey };
+        const enUso = Object.keys(atajos).find((a) => a !== accion && combosIguales(atajos[a], nuevo));
+        if (enUso) {
+          alert(`Ese atajo ya lo usa "${ATAJOS_LABELS[enUso]}". Elegí otro.`);
+          btn.textContent = anterior;
+        } else {
+          atajos[accion] = nuevo;
+          guardarAtajos();
+          btn.textContent = nombreCombo(nuevo);
+        }
+        window.removeEventListener("keydown", capturar, true);
+      };
+      window.addEventListener("keydown", capturar, true);
+    });
+  });
+}
+
+document.getElementById("btnAbrirAtajos").addEventListener("click", () => {
+  cuentaPop.classList.remove("open");
+  pintarAtajos();
+  atajosOverlay.classList.add("open");
+});
+document.getElementById("atajosClose").addEventListener("click", () => atajosOverlay.classList.remove("open"));
+document.getElementById("atajosListo").addEventListener("click", () => atajosOverlay.classList.remove("open"));
+atajosOverlay.addEventListener("click", (e) => { if (e.target === atajosOverlay) atajosOverlay.classList.remove("open"); });
+document.getElementById("atajosRestablecer").addEventListener("click", () => {
+  restablecerAtajos();
+  pintarAtajos();
 });
 
 window.addEventListener("keydown", (e) => {
