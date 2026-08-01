@@ -66,7 +66,7 @@ LIMITE_GRATIS_DIARIO = 5
 SUPABASE_URL = "https://ujuibmpvicuibidkbdrq.supabase.co"
 SUPABASE_ANON_KEY = "sb_publishable_x3mWkJJdqcimXIVkgbHEUA_-TWxzxtf"
 
-VERSION_APP = "2.3.1"
+VERSION_APP = "2.4.0"
 URL_ULTIMA_VERSION = "https://api.github.com/repos/clipxel/clipxel.github.io/releases/latest"
 URL_PAGINA_DESCARGA = "https://clipxel.github.io"
 
@@ -463,6 +463,52 @@ class Api:
             return self._llamar_rpc("guardar_configuracion", {"p_settings": settings})
         except Exception as e:
             return {"ok": False, "error": str(e)}
+
+    # ---------- plantillas (mascaras guardadas en la cuenta) ----------
+    def mis_plantillas(self):
+        try:
+            plantillas = self._llamar_rpc("mis_plantillas", {})
+            return {"ok": True, "plantillas": plantillas}
+        except Exception as e:
+            return {"ok": False, "error": f"No se pudo cargar la lista: {e}"}
+
+    def obtener_plantilla(self, plantilla_id):
+        try:
+            filas = self._llamar_rpc("obtener_plantilla", {"p_id": plantilla_id})
+            if not filas:
+                return {"ok": False, "error": "No se encontro la plantilla."}
+            return {"ok": True, "plantilla": filas[0]}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    def guardar_plantilla(self, nombre, mascara_b64, camara_marca=None, camara_modelo=None,
+                           ancho_ref=None, alto_ref=None, motor=None, sigma=None):
+        try:
+            return self._llamar_rpc("guardar_plantilla", {
+                "p_nombre": nombre,
+                "p_mascara_b64": mascara_b64,
+                "p_camara_marca": camara_marca,
+                "p_camara_modelo": camara_modelo,
+                "p_ancho_ref": ancho_ref,
+                "p_alto_ref": alto_ref,
+                "p_motor": motor,
+                "p_sigma": sigma,
+            })
+        except Exception as e:
+            return {"ok": False, "error": f"No se pudo guardar la plantilla: {e}"}
+
+    def borrar_plantilla(self, plantilla_id):
+        try:
+            return self._llamar_rpc("borrar_plantilla", {"p_id": plantilla_id})
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    # ---------- analitica de uso (liviana, sin contenido de videos) ----------
+    def registrar_evento(self, tipo, datos=None):
+        try:
+            return self._llamar_rpc("registrar_evento", {"p_tipo": tipo, "p_datos": datos or {}})
+        except Exception:
+            return {"ok": False}  # nunca debe romper el flujo de la app
 
     # ---------- soporte: diagnostico y reporte de errores ----------
     def _ram_total_gb(self):
@@ -869,6 +915,12 @@ class Api:
                     "logs": [], "terminado": False,
                 }
             threading.Thread(target=self._procesar_todo_worker, args=(payload,), daemon=True).start()
+            threading.Thread(target=self.registrar_evento, args=("proceso_lote", {
+                "so": platform.system(),
+                "motor": payload.get("motor"),
+                "resolucion": payload.get("resolucion"),
+                "cantidad_clips": total,
+            }), daemon=True).start()
             return {"ok": True}
         except Exception as e:
             with self._progreso_lock:

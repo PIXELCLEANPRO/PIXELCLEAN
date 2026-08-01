@@ -131,6 +131,9 @@
           <button class="tool-btn" id="btnLoadPng"><svg width="17" height="17"><use href="#i-upload"/></svg><span class="tip">Cargar PNG</span></button>
           <button class="tool-btn" id="btnBajarPng"><svg width="17" height="17"><use href="#i-download"/></svg><span class="tip">Bajar mascara como PNG</span></button>
           <div class="tool-sep"></div>
+          <button class="tool-btn" id="btnGuardarPlantilla"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span class="tip">Guardar como plantilla (en tu cuenta)</span></button>
+          <button class="tool-btn" id="btnMisPlantillas"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="tip">Mis plantillas guardadas</span></button>
+          <div class="tool-sep"></div>
           <div class="tool-pop-wrap">
             <button class="tool-btn" id="btnRealce"><svg width="17" height="17"><use href="#i-sun"/></svg><span class="tip">Resaltar</span></button>
             <div class="realce-pop" id="realcePop">
@@ -303,6 +306,29 @@
       <button class="btn btn-ghost" id="reporteCancelar">Cancelar</button>
       <button class="btn btn-primary" id="reporteEnviar">Enviar reporte</button>
     </div>
+  </div>
+</div>
+
+<div class="licencia-overlay" id="guardarPlantillaOverlay">
+  <div class="licencia-modal card" style="max-width:400px;text-align:left">
+    <button class="licencia-close" id="guardarPlantillaClose" aria-label="Cerrar">✕</button>
+    <h3 style="text-align:center">Guardar como plantilla</h3>
+    <p class="licencia-status" style="text-align:center">Queda en tu cuenta — la vas a poder cargar en cualquier PC donde inicies sesión, sin volver a pintar.</p>
+    <input type="text" id="plantillaNombreInput" class="licencia-input" placeholder="Nombre de la plantilla" style="text-transform:none;letter-spacing:normal">
+    <p class="licencia-msg" id="guardarPlantillaMsg"></p>
+    <div class="licencia-actions">
+      <button class="btn btn-ghost" id="guardarPlantillaCancelar">Cancelar</button>
+      <button class="btn btn-primary" id="guardarPlantillaConfirmar">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="licencia-overlay" id="plantillasOverlay">
+  <div class="licencia-modal card" style="max-width:420px;text-align:left">
+    <button class="licencia-close" id="plantillasClose" aria-label="Cerrar">✕</button>
+    <h3 style="text-align:center">Mis plantillas</h3>
+    <p class="licencia-status" id="plantillasStatus" style="text-align:center">Cargando...</p>
+    <div id="plantillasList"></div>
   </div>
 </div>
 

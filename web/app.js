@@ -99,6 +99,10 @@ const mockApi = {
     return {carpeta: mockApi._carpetaSalidaMock};
   },
   restablecer_carpeta_salida: async () => { mockApi._carpetaSalidaMock = null; return {carpeta: null}; },
+  mis_plantillas: async () => ({ok: true, plantillas: []}),
+  obtener_plantilla: async () => ({ok: false, error: "Modo de prueba en navegador."}),
+  guardar_plantilla: async () => ({ok: false, error: "Modo de prueba en navegador."}),
+  borrar_plantilla: async () => ({ok: false, error: "Modo de prueba en navegador."}),
 };
 
 // nota: el flujo real consulta el progreso por fetch('/progreso') servido por el mismo
@@ -385,6 +389,126 @@ document.getElementById("reporteEnviar").addEventListener("click", async () => {
     reporteMsg.className = "licencia-msg err";
   }
 });
+
+/* ---------------- Plantillas (mascaras guardadas en la cuenta) ---------------- */
+const guardarPlantillaOverlay = document.getElementById("guardarPlantillaOverlay");
+const plantillaNombreInput = document.getElementById("plantillaNombreInput");
+const guardarPlantillaMsg = document.getElementById("guardarPlantillaMsg");
+const plantillasOverlay = document.getElementById("plantillasOverlay");
+const plantillasStatus = document.getElementById("plantillasStatus");
+const plantillasList = document.getElementById("plantillasList");
+
+function abrirGuardarPlantilla() {
+  if (!hayMascara()) {
+    alert("Pintá una máscara antes de guardarla como plantilla.");
+    return;
+  }
+  const meta = _metaCache[state.clipReferencia] && _metaCache[state.clipReferencia].metadata;
+  plantillaNombreInput.value = meta && meta.modelo ? `${meta.marca || ""} ${meta.modelo}`.trim() : "";
+  guardarPlantillaMsg.textContent = "";
+  guardarPlantillaMsg.className = "licencia-msg";
+  guardarPlantillaOverlay.classList.add("open");
+  plantillaNombreInput.focus();
+}
+document.getElementById("btnGuardarPlantilla").addEventListener("click", abrirGuardarPlantilla);
+document.getElementById("guardarPlantillaClose").addEventListener("click", () => guardarPlantillaOverlay.classList.remove("open"));
+document.getElementById("guardarPlantillaCancelar").addEventListener("click", () => guardarPlantillaOverlay.classList.remove("open"));
+guardarPlantillaOverlay.addEventListener("click", (e) => { if (e.target === guardarPlantillaOverlay) guardarPlantillaOverlay.classList.remove("open"); });
+
+document.getElementById("guardarPlantillaConfirmar").addEventListener("click", async () => {
+  const nombre = plantillaNombreInput.value.trim();
+  if (!nombre) {
+    guardarPlantillaMsg.textContent = "Ponele un nombre a la plantilla.";
+    guardarPlantillaMsg.className = "licencia-msg err";
+    return;
+  }
+  const btn = document.getElementById("guardarPlantillaConfirmar");
+  btn.disabled = true;
+  guardarPlantillaMsg.textContent = "Guardando...";
+  guardarPlantillaMsg.className = "licencia-msg";
+
+  const meta = _metaCache[state.clipReferencia] && _metaCache[state.clipReferencia].metadata;
+  const resultado = await api.guardar_plantilla(
+    nombre, cnvMask.toDataURL(),
+    meta ? meta.marca : null, meta ? meta.modelo : null,
+    state.frameW, state.frameH, state.motor, state.sigma
+  ).catch((err) => ({ ok: false, error: String(err) }));
+  btn.disabled = false;
+
+  if (resultado.ok) {
+    guardarPlantillaMsg.textContent = "¡Guardada!";
+    guardarPlantillaMsg.className = "licencia-msg ok";
+    setTimeout(() => guardarPlantillaOverlay.classList.remove("open"), 1000);
+  } else {
+    guardarPlantillaMsg.textContent = resultado.error || "No se pudo guardar la plantilla.";
+    guardarPlantillaMsg.className = "licencia-msg err";
+  }
+});
+
+async function abrirPlantillas() {
+  plantillasOverlay.classList.add("open");
+  plantillasStatus.textContent = "Cargando...";
+  plantillasList.innerHTML = "";
+
+  const resultado = await api.mis_plantillas().catch((err) => ({ ok: false, error: String(err) }));
+  if (!resultado.ok) {
+    plantillasStatus.textContent = resultado.error || "No se pudo cargar la lista.";
+    return;
+  }
+
+  plantillasStatus.textContent = "";
+  if (!resultado.plantillas.length) {
+    plantillasStatus.textContent = "Todavía no guardaste ninguna plantilla.";
+    return;
+  }
+
+  resultado.plantillas.forEach((p) => {
+    const row = document.createElement("div");
+    row.className = "plantilla-row";
+    const camara = p.camara_marca || p.camara_modelo ? `${p.camara_marca || ""} ${p.camara_modelo || ""}`.trim() : "Sin cámara asociada";
+    row.innerHTML = `
+      <div>
+        <div class="plantilla-nombre">${p.nombre}</div>
+        <div class="plantilla-detalle">${camara} · ${formatearFechaRelativa(p.updated_at)}</div>
+      </div>
+      <div>
+        <button class="dispositivo-cerrar plantilla-borrar" data-id="${p.id}">Borrar</button>
+      </div>
+    `;
+    row.addEventListener("click", async (e) => {
+      if (e.target.closest(".plantilla-borrar")) return;
+      const r = await api.obtener_plantilla(p.id).catch((err) => ({ ok: false, error: String(err) }));
+      if (r.ok) {
+        restaurarDesde(r.plantilla.mascara_b64);
+        pushHistory();
+        plantillasOverlay.classList.remove("open");
+      } else {
+        alert(r.error || "No se pudo cargar la plantilla.");
+      }
+    });
+    plantillasList.appendChild(row);
+  });
+
+  plantillasList.querySelectorAll(".plantilla-borrar").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!confirm("¿Borrar esta plantilla?")) return;
+      btn.disabled = true;
+      btn.textContent = "...";
+      const r = await api.borrar_plantilla(btn.dataset.id).catch((err) => ({ ok: false, error: String(err) }));
+      if (r.ok) {
+        abrirPlantillas();
+      } else {
+        btn.disabled = false;
+        btn.textContent = "Borrar";
+        alert(r.error || "No se pudo borrar la plantilla.");
+      }
+    });
+  });
+}
+document.getElementById("btnMisPlantillas").addEventListener("click", abrirPlantillas);
+document.getElementById("plantillasClose").addEventListener("click", () => plantillasOverlay.classList.remove("open"));
+plantillasOverlay.addEventListener("click", (e) => { if (e.target === plantillasOverlay) plantillasOverlay.classList.remove("open"); });
 
 /* ---------------- Upsell a Pro al terminar de exportar ---------------- */
 async function mostrarUpsellSiCorresponde() {
