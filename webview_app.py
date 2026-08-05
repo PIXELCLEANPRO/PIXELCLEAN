@@ -239,6 +239,14 @@ class Api:
         return {"logueado": bool(sesion.get("access_token")), "email": sesion.get("email")}
 
     def cerrar_sesion(self):
+        """Cierra la sesion local. Ademas libera este dispositivo en el
+        servidor: si no lo hacemos, la cuenta Pro queda "activa" en este
+        equipo para siempre y bloquea el login en cualquier otro hasta que
+        alguien entre a "Mis dispositivos" y lo cierre a mano."""
+        try:
+            self._llamar_rpc("cerrar_sesion_dispositivo", {"p_device_id": self._id_dispositivo()})
+        except Exception:
+            pass
         self._borrar_sesion()
         return {"ok": True}
 
