@@ -182,6 +182,7 @@ class Api:
         self._preview_render_b64 = None
         self._preview_render_ultima = 0.0
         self._motor_gpu_cache = "sin_probar"
+        self._login_pendiente = None  # tokens de un login bloqueado por otro equipo, a la espera de que el usuario cierre esa sesion
 
     def _detectar_motor_gpu(self):
         """Prueba una sola vez por sesion que encoder de video acelerado por
@@ -332,34 +333,40 @@ class Api:
         if not access_token or not email:
             return {"ok": False, "error": "Login incompleto, probá de nuevo."}
 
-        device_id = self._id_dispositivo()
-        device_label = platform.node()
+        return self._intentar_iniciar_sesion(access_token, token_datos.get("refresh_token"), email)
 
+    def _intentar_iniciar_sesion(self, access_token, refresh_token, email):
+        """Registra este equipo en el servidor. Si la cuenta Pro esta activa
+        en otro equipo, no aborta: guarda los tokens en self._login_pendiente
+        para que el usuario pueda ver "sus dispositivos" y cerrar el otro
+        desde aca mismo (sin necesitar sesion propia en este equipo), y
+        despues reintentar."""
+        device_id = self._id_dispositivo()
         try:
-            req = urllib.request.Request(
-                f"{SUPABASE_URL}/rest/v1/rpc/iniciar_sesion",
-                data=json.dumps({"p_device_id": device_id, "p_device_label": device_label}).encode("utf-8"),
-                headers={
-                    "apikey": SUPABASE_ANON_KEY,
-                    "Authorization": f"Bearer {access_token}",
-                    "Content-Type": "application/json",
-                },
-                method="POST",
+            sesion_datos = self._llamar_rpc(
+                "iniciar_sesion",
+                {"p_device_id": device_id, "p_device_label": platform.node()},
+                access_token=access_token,
             )
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                sesion_datos = json.loads(resp.read().decode("utf-8"))
         except Exception as e:
             return {"ok": False, "error": f"No se pudo activar la cuenta: {e}"}
 
         if not sesion_datos.get("ok"):
+            self._login_pendiente = None
             return {"ok": False, "error": sesion_datos.get("error") or "No se pudo iniciar sesion."}
 
         if sesion_datos.get("bloqueado_por_otro_equipo"):
-            return {"ok": False, "error": "Tu cuenta CLIPXEL Pro ya esta activa en otro equipo. Cerra sesion ahi primero."}
+            self._login_pendiente = {"access_token": access_token, "refresh_token": refresh_token, "email": email}
+            return {
+                "ok": False,
+                "bloqueado": True,
+                "error": "Tu cuenta CLIPXEL Pro ya esta activa en otro equipo. Cerrala desde aca abajo y volvé a intentar.",
+            }
 
+        self._login_pendiente = None
         self._guardar_sesion({
             "access_token": access_token,
-            "refresh_token": token_datos.get("refresh_token"),
+            "refresh_token": refresh_token,
             "email": email,
             "plan": sesion_datos.get("plan", "free"),
             "device_id": device_id,
@@ -422,11 +429,11 @@ class Api:
         })
         return {"ok": True, "plan": sesion_datos.get("plan", "free")}
 
-    def _llamar_rpc(self, nombre, parametros):
+    def _llamar_rpc(self, nombre, parametros, access_token=None):
         import urllib.request
 
-        sesion = self._cargar_sesion()
-        access_token = sesion.get("access_token")
+        if access_token is None:
+            access_token = self._cargar_sesion().get("access_token")
         if not access_token:
             return {"ok": False, "error": "No hay sesion activa."}
         req = urllib.request.Request(
@@ -455,6 +462,38 @@ class Api:
             return resultado
         except Exception as e:
             return {"ok": False, "error": f"No se pudo cerrar esa sesion: {e}"}
+
+    # ---------- gestion de dispositivos desde la pantalla de login bloqueada ----------
+    # Cuando iniciar_sesion() devuelve bloqueado_por_otro_equipo, todavia no
+    # hay una sesion propia guardada en este equipo (por eso _llamar_rpc no
+    # tiene de donde sacar el token). Estos dos metodos usan el access_token
+    # que ya conseguimos con Google (guardado en self._login_pendiente) para
+    # poder listar y cerrar el otro dispositivo sin necesitar loguearse antes.
+    def dispositivos_pendientes(self):
+        if not self._login_pendiente:
+            return {"ok": False, "error": "No hay un login pendiente."}
+        try:
+            dispositivos = self._llamar_rpc(
+                "mis_dispositivos", {}, access_token=self._login_pendiente["access_token"]
+            )
+            return {"ok": True, "dispositivos": dispositivos}
+        except Exception as e:
+            return {"ok": False, "error": f"No se pudo cargar la lista: {e}"}
+
+    def cerrar_sesion_remota_pendiente(self, device_id):
+        if not self._login_pendiente:
+            return {"ok": False, "error": "No hay un login pendiente."}
+        pendiente = self._login_pendiente
+        try:
+            resultado = self._llamar_rpc(
+                "cerrar_sesion_dispositivo", {"p_device_id": device_id}, access_token=pendiente["access_token"]
+            )
+        except Exception as e:
+            return {"ok": False, "error": f"No se pudo cerrar esa sesion: {e}"}
+        if not resultado.get("ok"):
+            return resultado
+        # ya liberamos el otro equipo: reintentamos el login para terminar de activar este.
+        return self._intentar_iniciar_sesion(pendiente["access_token"], pendiente["refresh_token"], pendiente["email"])
 
     def cargar_configuracion(self):
         """Tema, pincel, motor y calidad preferidos, guardados en la cuenta.

@@ -87,6 +87,8 @@ const mockApi = {
   revalidar_sesion: async () => ({ok: false, error: "Modo de prueba en navegador."}),
   mis_dispositivos: async () => ({ok: true, dispositivos: []}),
   cerrar_sesion_remota: async () => ({ok: false, error: "Modo de prueba en navegador."}),
+  dispositivos_pendientes: async () => ({ok: false, error: "Modo de prueba en navegador."}),
+  cerrar_sesion_remota_pendiente: async () => ({ok: false, error: "Modo de prueba en navegador."}),
   elegir_archivo_adjunto: async () => ({ok: false, error: "Modo de prueba en navegador: no se puede abrir el explorador aca."}),
   reportar_error: async () => ({ok: false, error: "Modo de prueba en navegador."}),
   obtener_estado_actualizacion: async () => ({hay_actualizacion: false}),
@@ -143,22 +145,77 @@ async function chequearSesion() {
   return sesion.logueado;
 }
 
+const gateDispositivos = document.getElementById("gateDispositivos");
+const gateDispositivosList = document.getElementById("gateDispositivosList");
+
+function entrarSesionOk() {
+  gateMsg.textContent = "¡Listo! Entrando...";
+  gateMsg.className = "auth-gate-msg ok";
+  gateDispositivos.style.display = "none";
+  authGate.style.display = "none";
+  refrescarPlanBadge();
+  refrescarCuentaPop();
+  if (typeof cargarConfiguracionInicial === "function") cargarConfiguracionInicial();
+}
+
+async function mostrarDispositivosPendientes() {
+  gateDispositivos.style.display = "block";
+  gateDispositivosList.innerHTML = '<p class="auth-gate-msg">Cargando tus equipos...</p>';
+
+  const resultado = await api.dispositivos_pendientes().catch((err) => ({ ok: false, error: String(err) }));
+  if (!resultado.ok || !resultado.dispositivos || !resultado.dispositivos.length) {
+    gateDispositivosList.innerHTML = "";
+    return;
+  }
+
+  gateDispositivosList.innerHTML = "";
+  resultado.dispositivos.forEach((d) => {
+    const row = document.createElement("div");
+    row.className = "dispositivo-row";
+    const activo = d.es_actual_pro ? '<span class="dispositivo-tag">Pro activo aca</span>' : "";
+    row.innerHTML = `
+      <div>
+        <div class="dispositivo-nombre">${d.device_label || "Equipo sin nombre"} ${activo}</div>
+        <div class="dispositivo-fecha">Ultima vez: ${formatearFechaRelativa(d.last_seen_at)}</div>
+      </div>
+      <button class="dispositivo-cerrar" data-device="${d.device_id}">Cerrar sesión</button>
+    `;
+    gateDispositivosList.appendChild(row);
+  });
+
+  gateDispositivosList.querySelectorAll(".dispositivo-cerrar").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      btn.textContent = "...";
+      const r = await api.cerrar_sesion_remota_pendiente(btn.dataset.device).catch((err) => ({ ok: false, error: String(err) }));
+      if (r.ok) {
+        entrarSesionOk();
+      } else if (r.bloqueado) {
+        gateMsg.textContent = r.error || "No se pudo cerrar esa sesión.";
+        gateMsg.className = "auth-gate-msg err";
+        mostrarDispositivosPendientes();
+      } else {
+        btn.disabled = false;
+        btn.textContent = "Cerrar sesión";
+        alert(r.error || "No se pudo cerrar esa sesión.");
+      }
+    });
+  });
+}
+
 gateBtn.addEventListener("click", async () => {
   gateBtn.disabled = true;
+  gateDispositivos.style.display = "none";
   gateMsg.textContent = "Se abrió tu navegador para iniciar sesión con Google. Completá el login ahí y volvé acá.";
   gateMsg.className = "auth-gate-msg";
   const resultado = await api.iniciar_login_google().catch((err) => ({ ok: false, error: String(err) }));
   gateBtn.disabled = false;
   if (resultado.ok) {
-    gateMsg.textContent = "¡Listo! Entrando...";
-    gateMsg.className = "auth-gate-msg ok";
-    authGate.style.display = "none";
-    refrescarPlanBadge();
-    refrescarCuentaPop();
-    if (typeof cargarConfiguracionInicial === "function") cargarConfiguracionInicial();
+    entrarSesionOk();
   } else {
     gateMsg.textContent = resultado.error || "No se pudo iniciar sesión.";
     gateMsg.className = "auth-gate-msg err";
+    if (resultado.bloqueado) mostrarDispositivosPendientes();
   }
 });
 
