@@ -135,7 +135,7 @@
     </ul>
 
     <div class="account-actions">
-      <button class="btn-action" id="btnLiberarDispositivo" style="display:none">Liberar este equipo (activar Pro en otra PC)</button>
+      <button class="btn-action" id="btnLiberarDispositivo" style="display:none">Cerrar sesión en ese equipo</button>
       <button class="btn-action danger" id="btnSalir">Cerrar sesión</button>
     </div>
   </div>
@@ -186,7 +186,7 @@
 
   document.getElementById("btnLiberarDispositivo").addEventListener("click", async function () {
     var btn = this;
-    if (!confirm("¿Liberar el equipo activado? La próxima PC donde inicies sesión con esta cuenta va a quedar como el equipo Pro activo.")) return;
+    if (!confirm("¿Cerrar la sesión Pro en ese otro equipo? La próxima PC donde inicies sesión con esta cuenta va a quedar como el equipo Pro activo.")) return;
     btn.disabled = true;
     mostrarMensaje("", "");
     var { data, error } = await sb.rpc("liberar_dispositivo");
@@ -240,8 +240,10 @@
       if (perfil.device_label) {
         filaDispositivo.style.display = "flex";
         document.getElementById("infoDispositivo").textContent = perfil.device_label;
+        btnLiberar.textContent = "Cerrar sesión en “" + perfil.device_label + "”";
       } else {
         filaDispositivo.style.display = "none";
+        btnLiberar.textContent = "Cerrar sesión en ese equipo";
       }
       btnLiberar.style.display = "";
     } else {
