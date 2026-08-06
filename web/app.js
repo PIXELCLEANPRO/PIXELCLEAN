@@ -568,9 +568,7 @@ async function abrirPlantillas() {
       if (e.target.closest(".plantilla-borrar")) return;
       const r = await api.obtener_plantilla(p.id).catch((err) => ({ ok: false, error: String(err) }));
       if (r.ok) {
-        restaurarDesde(r.plantilla.mascara_b64);
-        fijarMascaraBase(r.plantilla.mascara_b64);
-        pushHistory();
+        cargarMascaraEscalada(r.plantilla.mascara_b64);
         plantillasOverlay.classList.remove("open");
       } else {
         alert(r.error || "No se pudo cargar la plantilla.");
@@ -1309,6 +1307,22 @@ function pushHistory() {
 function restaurarDesde(dataUrl) {
   const img = new Image();
   img.onload = () => { ctxMask.clearRect(0, 0, cnvMask.width, cnvMask.height); ctxMask.drawImage(img, 0, 0); actualizarPreview("mascara"); };
+  img.src = dataUrl;
+}
+// Igual que restaurarDesde, pero estira la imagen al tamaño actual del
+// lienzo: una plantilla guardada con un clip (por ej. a 1080p) puede
+// aplicarse despues sobre un clip de otra resolucion (por ej. 4K) y tiene
+// que cubrir todo el frame, no quedar pegada en la esquina a su tamaño
+// original.
+function cargarMascaraEscalada(dataUrl) {
+  const img = new Image();
+  img.onload = () => {
+    ctxMask.clearRect(0, 0, cnvMask.width, cnvMask.height);
+    ctxMask.drawImage(img, 0, 0, cnvMask.width, cnvMask.height);
+    fijarMascaraBase(cnvMask.toDataURL());
+    pushHistory();
+    actualizarPreview("mascara");
+  };
   img.src = dataUrl;
 }
 function deshacer() {
